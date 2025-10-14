@@ -1,55 +1,58 @@
-/// Demo.Msg.FileProcessResponse - Response message from CSV file processing
+/// Demo.Msg.FileProcessResponse - Response message for file processing
 Class Demo.Msg.FileProcessResponse Extends Ens.Response
 {
 
-/// Processing status: "ok", "partial", "error", "duplicate"
+/// Overall processing status: "ok", "partial", "failed", "error"
 Property Status As %String(MAXLEN = 20) [ Required ];
 
-/// Total number of records found in CSV
-Property TotalRecords As %Integer;
+/// Total number of records found in CSV file
+Property TotalRecords As %Integer [ InitialExpression = 0 ];
 
-/// Number of records successfully inserted in MySQL
-Property MySQLRecordsOK As %Integer;
+/// Number of records successfully processed by MySQL
+Property MySQLRecordsOK As %Integer [ InitialExpression = 0 ];
 
-/// Number of records that failed to insert in MySQL
-Property MySQLRecordsFailed As %Integer;
+/// Number of records that failed in MySQL
+Property MySQLRecordsFailed As %Integer [ InitialExpression = 0 ];
 
-/// Number of records successfully inserted in PostgreSQL
-Property PostgreSQLRecordsOK As %Integer;
+/// Number of records successfully processed by PostgreSQL
+Property PostgreSQLRecordsOK As %Integer [ InitialExpression = 0 ];
 
-/// Number of records that failed to insert in PostgreSQL
-Property PostgreSQLRecordsFailed As %Integer;
+/// Number of records that failed in PostgreSQL
+Property PostgreSQLRecordsFailed As %Integer [ InitialExpression = 0 ];
 
-/// Error message if processing failed
+/// Error message if status is "error" or "failed"
 Property ErrorMessage As %String(MAXLEN = 2000);
 
-/// Array of detailed error messages per record
-Property DetailedErrors As list Of %String(MAXLEN = 500);
+/// Original filename for tracking
+Property FileName As %String(MAXLEN = 255);
 
-/// Processing start time
-Property ProcessingStarted As %TimeStamp;
+/// File hash for tracking
+Property FileHash As %String(MAXLEN = 64);
 
-/// Processing end time
-Property ProcessingCompleted As %TimeStamp;
+/// Timestamp when processing was completed
+Property ProcessedAt As %TimeStamp;
 
-/// Duration in seconds
-Property ProcessingDuration As %Numeric(SCALE = 3);
+/// Processing duration in seconds
+Property ProcessingDuration As %Numeric;
 
-/// Method to calculate processing duration
-Method CalculateDuration() As %Numeric
+/// Method to calculate total success count
+Method GetTotalSuccessCount() As %Integer
 {
-    If (..ProcessingStarted '= "") && (..ProcessingCompleted '= "") {
-        Set start = ##class(%TimeStamp).LogicalToOdbc(..ProcessingStarted)
-        Set end = ##class(%TimeStamp).LogicalToOdbc(..ProcessingCompleted)
-        Set ..ProcessingDuration = ##class(%TimeStamp).TimestampSubtract(end, start)
-    }
-    Return ..ProcessingDuration
+    Return ..MySQLRecordsOK + ..PostgreSQLRecordsOK
 }
 
-/// Method to add detailed error
-Method AddDetailedError(error As %String)
+/// Method to calculate total failure count
+Method GetTotalFailureCount() As %Integer
 {
-    Do ..DetailedErrors.Insert(error)
+    Return ..MySQLRecordsFailed + ..PostgreSQLRecordsFailed
+}
+
+/// Method to get success rate percentage
+Method GetSuccessRate() As %Numeric
+{
+    Set totalExpected = ..TotalRecords * 2  // Expected in both databases
+    If totalExpected = 0 Return 0
+    Return (..GetTotalSuccessCount() / totalExpected) * 100
 }
 
 /// Storage definition
@@ -79,23 +82,23 @@ Storage Default
 <Value>ErrorMessage</Value>
 </Value>
 <Value name="8">
-<Value>DetailedErrors</Value>
+<Value>FileName</Value>
 </Value>
 <Value name="9">
-<Value>ProcessingStarted</Value>
+<Value>FileHash</Value>
 </Value>
 <Value name="10">
-<Value>ProcessingCompleted</Value>
+<Value>ProcessedAt</Value>
 </Value>
 <Value name="11">
 <Value>ProcessingDuration</Value>
 </Value>
 </Data>
-<DataLocation>^Demo.Msg.FileProcessResponseD</DataLocation>
+<DataLocation>^Ens.MessageBodyD</DataLocation>
 <DefaultData>FileProcessResponseDefaultData</DefaultData>
-<IdLocation>^Demo.Msg.FileProcessResponseD</IdLocation>
-<IndexLocation>^Demo.Msg.FileProcessResponseI</IndexLocation>
-<StreamLocation>^Demo.Msg.FileProcessResponseS</StreamLocation>
+<IdLocation>^Ens.MessageBodyD</IdLocation>
+<IndexLocation>^Ens.MessageBodyI</IndexLocation>
+<StreamLocation>^Ens.MessageBodyS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

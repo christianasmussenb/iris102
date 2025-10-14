@@ -64,6 +64,11 @@ Storage Default
 <Value>SubmittedAt</Value>
 </Value>
 </Data>
+<DataLocation>^Ens.MessageBodyD</DataLocation>
+<DefaultData>DatabaseInsertRequestDefaultData</DefaultData>
+<IdLocation>^Ens.MessageBodyD</IdLocation>
+<IndexLocation>^Ens.MessageBodyI</IndexLocation>
+<StreamLocation>^Ens.MessageBodyS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

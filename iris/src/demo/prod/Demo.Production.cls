@@ -187,7 +187,7 @@ ClassMethod InitializeDatabaseConnections() As %Status
 }
 
 /// Production shutdown handler
-ClassMethod OnStop(pTimeStarted As %String, pTimeStoppedLocalTime As %String) As %Status
+ClassMethod OnStop(pTimeStarted As %String, pTimeStoppedLocal As %Boolean) As %Status
 {
     Set status = $$$OK
     

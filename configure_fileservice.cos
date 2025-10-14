@@ -1,0 +1,75 @@
+// Configure FileService Adapter Settings
+write "Configuring FileService adapter...", !
+
+// Get current production configuration
+set prodName = "Demo.Production"
+set production = ##class(Ens.Config.Production).%OpenId(prodName)
+if '$IsObject(production) {
+    write "ERROR: Cannot open production ", prodName, !
+    quit
+}
+
+// Find FileService item
+set item = ""
+for i=1:1:production.Items.Count() {
+    set currentItem = production.Items.GetAt(i)
+    if currentItem.Name = "FileService" {
+        set item = currentItem
+        quit
+    }
+}
+
+if '$IsObject(item) {
+    write "ERROR: FileService item not found in production", !
+    quit
+}
+
+// Clear existing adapter settings
+for i=item.Settings.Count():-1:1 {
+    set setting = item.Settings.GetAt(i)
+    if setting.Target = "Adapter" {
+        do item.Settings.RemoveAt(i)
+    }
+}
+
+// Add FilePath setting
+set setting1 = ##class(Ens.Config.Setting).%New()
+set setting1.Target = "Adapter"
+set setting1.Name = "FilePath"
+set setting1.Value = "/data/IN/"
+do item.Settings.Insert(setting1)
+
+// Add FileSpec setting
+set setting2 = ##class(Ens.Config.Setting).%New()
+set setting2.Target = "Adapter"
+set setting2.Name = "FileSpec"
+set setting2.Value = "*.csv"
+do item.Settings.Insert(setting2)
+
+// Add ArchivePath setting
+set setting3 = ##class(Ens.Config.Setting).%New()
+set setting3.Target = "Adapter"
+set setting3.Name = "ArchivePath"
+set setting3.Value = "/data/OUT/"
+do item.Settings.Insert(setting3)
+
+// Save production configuration
+set status = production.%Save()
+if $$$ISERR(status) {
+    write "ERROR saving production: ", $System.Status.GetErrorText(status), !
+    quit
+}
+
+write "FileService adapter configured successfully!", !
+write "FilePath: /data/IN/", !
+write "FileSpec: *.csv", !
+write "ArchivePath: /data/OUT/", !
+
+// Restart production to apply changes
+write "Restarting production...", !
+do ##class(Ens.Director).StopProduction()
+hang 2
+do ##class(Ens.Director).StartProduction(prodName)
+write "Production restarted!", !
+
+quit

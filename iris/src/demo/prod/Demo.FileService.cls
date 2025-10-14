@@ -26,9 +26,14 @@ Method OnInit() As %Status
         Set ..OutputDir = $System.Util.GetEnviron("OUT_DIR", "/data/OUT")
         Set ..LogDir = $System.Util.GetEnviron("LOG_DIR", "/data/LOG")
         
-        // Log service initialization
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.FileService", "Service initialized - InputDir: " _ ..InputDir _ ", OutputDir: " _ ..OutputDir)
-        Do ##class(Demo.Util.Logger).WriteFileLog("SERVICE_INIT FileService initialized with InputDir=" _ ..InputDir)
+        // Log service initialization - wrapped in try/catch
+        Try {
+            Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.FileService", "Service initialized - InputDir: " _ ..InputDir _ ", OutputDir: " _ ..OutputDir)
+            Do ##class(Demo.Util.Logger).WriteFileLog("SERVICE_INIT FileService initialized with InputDir=" _ ..InputDir)
+        } Catch logEx {
+            // If logging fails, continue without it for now
+            Write "Warning: Logging failed during initialization: " _ logEx.DisplayString()
+        }
         
         // Ensure directories exist
         If '##class(%File).DirectoryExists(..InputDir) {

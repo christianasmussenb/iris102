@@ -88,6 +88,11 @@ Storage Default
 <Value>ProcessingDuration</Value>
 </Value>
 </Data>
+<DataLocation>^Ens.MessageBodyD</DataLocation>
+<DefaultData>DatabaseInsertResponseDefaultData</DefaultData>
+<IdLocation>^Ens.MessageBodyD</IdLocation>
+<IndexLocation>^Ens.MessageBodyI</IndexLocation>
+<StreamLocation>^Ens.MessageBodyS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

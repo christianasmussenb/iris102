@@ -44,11 +44,11 @@ Storage Default
 <Value>RetryCount</Value>
 </Value>
 </Data>
-<DataLocation>^Demo.Msg.FileProcessRequestD</DataLocation>
+<DataLocation>^Ens.MessageBodyD</DataLocation>
 <DefaultData>FileProcessRequestDefaultData</DefaultData>
-<IdLocation>^Demo.Msg.FileProcessRequestD</IdLocation>
-<IndexLocation>^Demo.Msg.FileProcessRequestI</IndexLocation>
-<StreamLocation>^Demo.Msg.FileProcessRequestS</StreamLocation>
+<IdLocation>^Ens.MessageBodyD</IdLocation>
+<IndexLocation>^Ens.MessageBodyI</IndexLocation>
+<StreamLocation>^Ens.MessageBodyS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

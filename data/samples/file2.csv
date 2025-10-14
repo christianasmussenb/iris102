@@ -1,0 +1,6 @@
+external_id,name,amount,occurred_at
+T001,Transacción Uno,500.25,2025-10-14T14:00:00Z
+T002,Transacción Dos,750.50,2025-10-14T14:15:00Z
+T003,Transacción Tres,1000.00,2025-10-14T14:30:00Z
+T004,Transacción Cuatro,325.75,2025-10-14T14:45:00Z
+T005,Transacción Cinco,875.25,2025-10-14T15:00:00Z

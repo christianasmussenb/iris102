@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# IRIS initialization script for iris102 demo
+
+set -e
+
+echo "Starting IRIS initialization for iris102 demo..."
+
+# Wait for IRIS to be ready
+echo "Waiting for IRIS to start..."
+until iris session iris -U %SYS < /dev/null; do
+    echo "IRIS not ready yet, waiting..."
+    sleep 5
+done
+
+echo "IRIS is ready. Initializing demo..."
+
+# Run IRIS commands to setup the demo
+iris session iris -U %SYS << 'EOF'
+// Create DEMO namespace
+set ns="DEMO"
+if '##class(Config.Namespaces).Exists(ns) {
+    write "Creating namespace "_ns,!
+    set properties("Globals") = "USER"
+    set properties("Routines") = "USER" 
+    set properties("Package") = "USER"
+    set Status = ##class(Config.Namespaces).Create(ns, .properties)
+    if $$$ISERR(Status) {
+        write "Error creating namespace: "
+        do $System.Status.DisplayError(Status)
+    } else {
+        write "Namespace "_ns_" created successfully",!
+    }
+} else {
+    write "Namespace "_ns_" already exists",!
+}
+
+// Switch to DEMO namespace
+zn "DEMO"
+
+// Import and compile the installer
+write "Importing Installer.cls...",!
+set status = $system.OBJ.Load("/opt/irisapp/Installer.cls","ck")
+if $$$ISERR(status) {
+    write "Error loading Installer.cls: "
+    do $System.Status.DisplayError(status)
+} else {
+    write "Installer.cls loaded successfully",!
+}
+
+// Run the installer
+write "Running installer...",!
+set status = ##class(Demo.Installer).Run()
+if $$$ISERR(status) {
+    write "Error running installer: "
+    do $System.Status.DisplayError(status)
+} else {
+    write "Installer completed successfully",!
+}
+
+// Enable Interoperability
+write "Enabling Interoperability...",!
+set status = ##class(Ens.Director).EnableNamespace($namespace, 1)
+if $$$ISERR(status) {
+    write "Error enabling Interoperability: "
+    do $System.Status.DisplayError(status)
+} else {
+    write "Interoperability enabled successfully",!
+}
+
+write "IRIS initialization completed successfully!",!
+EOF
+
+echo "IRIS initialization script completed."

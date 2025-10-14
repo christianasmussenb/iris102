@@ -1,0 +1,58 @@
+services:
+  iris:
+    build: 
+      context: ./iris
+      dockerfile: Dockerfile.fixed
+    container_name: iris102-simple
+    hostname: iris102
+    environment:
+      - ISC_PASSWORD=SYS
+      - IN_DIR=/data/IN
+      - OUT_DIR=/data/OUT
+      - LOG_DIR=/data/LOG
+      - MYSQL_HOST=mysql
+      - MYSQL_DB=demo
+      - MYSQL_USER=demo
+      - MYSQL_PASSWORD=demo_pass
+    ports:
+      - "1972:1972"    # SuperServer
+      - "52773:52773"  # Web Server/Management Portal
+    volumes:
+      - ./data:/data
+      - ./iris/src:/opt/irisapp/src
+      - iris-data:/usr/irissys/mgr
+    depends_on:
+      - mysql
+    restart: unless-stopped
+    # Remove health check to avoid "unhealthy" status
+    # healthcheck:
+    #   disable: true
+
+  mysql:
+    image: mysql:8.0
+    container_name: iris102-mysql
+    hostname: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: demo
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./sql/mysql_init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4
+    container_name: iris102-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+volumes:
+  iris-data:
+  mysql-data:

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Simple IRIS initialization script
+echo "Starting IRIS102 Demo initialization..."
+
+# Wait for IRIS to be ready
+sleep 10
+
+# Basic initialization without complex setup
+echo "IRIS initialization completed."

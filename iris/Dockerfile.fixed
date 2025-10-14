@@ -1,0 +1,22 @@
+# InterSystems IRIS Dockerfile for iris102 demo - SIMPLIFIED VERSION
+FROM intersystemsdc/iris-community:latest
+
+# Switch to root for setup
+USER root
+
+# Set working directory
+WORKDIR /opt/irisapp
+
+# Copy source files first
+COPY src/ /opt/irisapp/src/
+COPY Installer.cls /opt/irisapp/
+
+# Set ownership
+RUN chown -R irisowner:irisowner /opt/irisapp
+
+# Switch back to iris user for runtime
+USER irisowner
+
+# Environment variables for IRIS
+ENV IRIS_PROJECT_PATH=/opt/irisapp/src
+ENV IRIS_NAMESPACE=DEMO

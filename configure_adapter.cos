@@ -1,0 +1,80 @@
+/// Configure FileService adapter settings programmatically
+set prodName = "Demo.Production"
+write "Configuring FileService adapter for production: ", prodName, !
+
+// Open production configuration
+set production = ##class(Ens.Config.Production).%OpenId(prodName)
+if '$IsObject(production) {
+    write "ERROR: Cannot open production ", prodName, !
+    quit
+}
+
+// Find FileService item
+set fileServiceItem = ""
+for i=1:1:production.Items.Count() {
+    set item = production.Items.GetAt(i)
+    if item.Name = "FileService" {
+        set fileServiceItem = item
+        write "Found FileService item!", !
+        quit
+    }
+}
+
+if '$IsObject(fileServiceItem) {
+    write "ERROR: FileService item not found in production", !
+    quit
+}
+
+// Clear existing adapter settings to avoid duplicates
+set newSettings = ##class(%ListOfObjects).%New()
+for i=1:1:fileServiceItem.Settings.Count() {
+    set setting = fileServiceItem.Settings.GetAt(i)
+    if setting.Target '= "Adapter" {
+        do newSettings.Insert(setting)
+    }
+}
+
+// Add new adapter settings
+// FilePath setting
+set setting1 = ##class(Ens.Config.Setting).%New()
+set setting1.Target = "Adapter"
+set setting1.Name = "FilePath"
+set setting1.Value = "/data/IN/"
+do newSettings.Insert(setting1)
+
+// FileSpec setting
+set setting2 = ##class(Ens.Config.Setting).%New()
+set setting2.Target = "Adapter"
+set setting2.Name = "FileSpec"
+set setting2.Value = "*.csv"
+do newSettings.Insert(setting2)
+
+// ArchivePath setting
+set setting3 = ##class(Ens.Config.Setting).%New()
+set setting3.Target = "Adapter"
+set setting3.Name = "ArchivePath"
+set setting3.Value = "/data/OUT/"
+do newSettings.Insert(setting3)
+
+// Replace settings collection
+set fileServiceItem.Settings = newSettings
+
+// Save production configuration
+set status = production.%Save()
+if $$$ISERR(status) {
+    write "ERROR saving production: ", $System.Status.GetErrorText(status), !
+    quit
+}
+
+write "FileService adapter configured successfully!", !
+write "Settings applied:", !
+write "  FilePath: /data/IN/", !
+write "  FileSpec: *.csv", !
+write "  ArchivePath: /data/OUT/", !
+
+// Apply configuration by updating production
+write "Applying configuration...", !
+do ##class(Ens.Director).UpdateProduction()
+write "Configuration applied! FileService should now monitor /data/IN/ for CSV files.", !
+
+quit

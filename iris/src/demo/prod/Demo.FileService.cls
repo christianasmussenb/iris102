@@ -21,34 +21,18 @@ Method OnInit() As %Status
     Set status = $$$OK
     
     Try {
-        // Get paths from environment variables
-        Set ..InputDir = $System.Util.GetEnviron("IN_DIR", "/data/IN")
-        Set ..OutputDir = $System.Util.GetEnviron("OUT_DIR", "/data/OUT")
-        Set ..LogDir = $System.Util.GetEnviron("LOG_DIR", "/data/LOG")
+        // Use fixed paths to avoid environment variable issues
+        Set ..InputDir = "/data/IN"
+        Set ..OutputDir = "/data/OUT"
+        Set ..LogDir = "/data/LOG"
         
-        // Log service initialization - wrapped in try/catch
-        Try {
-            Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.FileService", "Service initialized - InputDir: " _ ..InputDir _ ", OutputDir: " _ ..OutputDir)
-            Do ##class(Demo.Util.Logger).WriteFileLog("SERVICE_INIT FileService initialized with InputDir=" _ ..InputDir)
-        } Catch logEx {
-            // If logging fails, continue without it for now
-            Write "Warning: Logging failed during initialization: " _ logEx.DisplayString()
-        }
-        
-        // Ensure directories exist
-        If '##class(%File).DirectoryExists(..InputDir) {
-            Do ##class(%File).CreateDirectoryChain(..InputDir)
-        }
-        If '##class(%File).DirectoryExists(..OutputDir) {
-            Do ##class(%File).CreateDirectoryChain(..OutputDir)
-        }
-        If '##class(%File).DirectoryExists(..LogDir) {
-            Do ##class(%File).CreateDirectoryChain(..LogDir)
-        }
+        // Ensure directories exist - using simple approach
+        Do ##class(%File).CreateDirectoryChain(..InputDir)
+        Do ##class(%File).CreateDirectoryChain(..OutputDir)
+        Do ##class(%File).CreateDirectoryChain(..LogDir)
         
     } Catch ex {
         Set status = ex.AsStatus()
-        Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.FileService", "Initialization failed: " _ ex.DisplayString())
     }
     
     Return status

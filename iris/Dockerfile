@@ -1,6 +1,9 @@
 # InterSystems IRIS Dockerfile for iris102 demo
 FROM intersystemsdc/iris-community:latest
 
+# Switch to root for setup
+USER root
+
 # Set working directory
 WORKDIR /opt/irisapp
 
@@ -18,7 +21,6 @@ COPY src/ /opt/irisapp/src/
 COPY Installer.cls /opt/irisapp/
 
 # Set ownership and permissions
-USER root
 RUN chown -R irisowner:irisowner /opt/irisapp \
     && chown -R irisowner:irisowner /data
 

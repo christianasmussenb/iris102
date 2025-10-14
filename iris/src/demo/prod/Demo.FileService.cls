@@ -15,6 +15,8 @@ Property OutputDir As %String [ InitialExpression = "/data/OUT" ];
 
 Property LogDir As %String [ InitialExpression = "/data/LOG" ];
 
+Property WIPDir As %String [ InitialExpression = "/data/WIP" ];
+
 /// Initialize service with environment variables
 Method OnInit() As %Status
 {
@@ -25,11 +27,13 @@ Method OnInit() As %Status
         Set ..InputDir = "/data/IN"
         Set ..OutputDir = "/data/OUT"
         Set ..LogDir = "/data/LOG"
+        Set ..WIPDir = "/data/WIP"
         
         // Ensure directories exist - using simple approach
         Do ##class(%File).CreateDirectoryChain(..InputDir)
         Do ##class(%File).CreateDirectoryChain(..OutputDir)
         Do ##class(%File).CreateDirectoryChain(..LogDir)
+        Do ##class(%File).CreateDirectoryChain(..WIPDir)
         
     } Catch ex {
         Set status = ex.AsStatus()

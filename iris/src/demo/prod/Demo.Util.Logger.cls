@@ -9,24 +9,20 @@ Parameter MAXLOGLINES = 10000;
 Parameter DEFAULTHASHALG = "SHA256";
 
 /// Write an event to the IRIS Event Log
-ClassMethod WriteEvent(level As %String, source As %String, text As %String) As %Status
+ClassMethod WriteEvent(level As %String = "INFO", source As %String = "", text As %String = "") As %Status
 {
     Set status = $$$OK
     
     Try {
-        // Validate level
-        If '(level = "INFO" || level = "WARNING" || level = "ERROR" || level = "FATAL") {
+        If level = "" {
             Set level = "INFO"
         }
         
-        // Use simple console output and file logging instead of Ens.Event.Log
+        // Use simple file logging only (avoid console output in Business Process)
         Set timestamp = $ZDateTime($ZTimeStamp, 3)
         Set logLine = "[" _ timestamp _ "] " _ level _ " - " _ source _ " - " _ text
         
-        // Write to console for immediate feedback
-        Write logLine, !
-        
-        // Also write to a simple log file using basic file I/O
+        // Write to log file only
         Try {
             Set logFile = "/data/LOG/event_" _ $ZDate($Horolog, 8) _ ".log"
             
@@ -38,7 +34,7 @@ ClassMethod WriteEvent(level As %String, source As %String, text As %String) As 
             // Simple file append operation
             Open logFile:("WNS"):1
             If '$Test {
-                Write "Could not open log file: ", logFile, !
+                // Silently fail if can't open log file
             } Else {
                 Use logFile
                 Write logLine, !
@@ -47,13 +43,12 @@ ClassMethod WriteEvent(level As %String, source As %String, text As %String) As 
             }
             
         } Catch logEx {
-            // If file logging fails, at least we have console output
-            Write "LOG FILE ERROR: ", logEx.DisplayString(), !
+            // Silently handle file logging errors
         }
         
     } Catch ex {
         Set status = ex.AsStatus()
-        Write "ERROR in WriteEvent: ", ex.DisplayString(), !
+        // Don't write to console from Business Process - just set error status
     }
     
     Return status

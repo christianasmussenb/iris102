@@ -21,6 +21,8 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
     Set pResponse = ##class(Demo.Msg.FileProcessResponse).%New()
     
     Try {
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "OnRequest started for file: " _ pRequest.FileName)
+        
         // Initialize response with request data
         Set pResponse.FileName = pRequest.FileName
         Set pResponse.FileHash = pRequest.FileHash
@@ -41,11 +43,29 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
             Return $$$OK
         }
         
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "File exists, about to parse CSV")
+        
         // Parse CSV file and validate structure
+        Set recordCount = 0
+        Kill csvData
+        
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "About to call ParseCSVFile for: " _ pRequest.FilePath)
+        
         Set parseStatus = ..ParseCSVFile(pRequest.FilePath, .csvData, .recordCount)
+        
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "ParseCSVFile returned status: " _ $System.Status.GetErrorText(parseStatus) _ ", recordCount: " _ recordCount)
+        
         If $$$ISERR(parseStatus) {
             Set pResponse.Status = "error"
             Set pResponse.ErrorMessage = "CSV parsing failed: " _ $System.Status.GetErrorText(parseStatus)
+            Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Process", pResponse.ErrorMessage)
+            Return $$$OK
+        }
+        
+        // Debug: Check if csvData is properly initialized
+        If '$Data(csvData) {
+            Set pResponse.Status = "error"
+            Set pResponse.ErrorMessage = "CSV data not initialized after parsing"
             Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Process", pResponse.ErrorMessage)
             Return $$$OK
         }
@@ -61,13 +81,17 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
             Return $$$OK
         }
         
+        // Initialize database operation counters
+        Set mysqlOK = 0, mysqlFailed = 0, mysqlError = ""
+        Set postgresOK = 0, postgresFailed = 0, postgresError = ""
+        
         // Process MySQL insertion
-        Set mysqlStatus = ..ProcessDatabaseInsertion("MySQL", ..MySQLTarget, csvData, recordCount, .mysqlOK, .mysqlFailed, .mysqlError)
+        Set mysqlStatus = ..ProcessDatabaseInsertion("MySQL", ..MySQLTarget, .csvData, recordCount, .mysqlOK, .mysqlFailed, .mysqlError)
         Set pResponse.MySQLRecordsOK = mysqlOK
         Set pResponse.MySQLRecordsFailed = mysqlFailed
         
         // Process PostgreSQL insertion
-        Set postgresStatus = ..ProcessDatabaseInsertion("PostgreSQL", ..PostgreSQLTarget, csvData, recordCount, .postgresOK, .postgresFailed, .postgresError)
+        Set postgresStatus = ..ProcessDatabaseInsertion("PostgreSQL", ..PostgreSQLTarget, .csvData, recordCount, .postgresOK, .postgresFailed, .postgresError)
         Set pResponse.PostgreSQLRecordsOK = postgresOK
         Set pResponse.PostgreSQLRecordsFailed = postgresFailed
         
@@ -88,7 +112,7 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
         
         // Calculate processing duration
         Set endTime = $ZHorolog
-        Set duration = ##class(Demo.Util.Logger).CalculateDuration(startTime, endTime)
+        Set duration = $Piece(endTime, ",", 2) - $Piece(startTime, ",", 2)  // Simple seconds calculation
         Set pResponse.ProcessingDuration = duration
         
         // Log final result
@@ -128,36 +152,49 @@ Method ParseCSVFile(filePath As %String, Output csvData, Output recordCount As %
     Kill csvData
     
     Try {
-        // Open file for reading
-        Set file = ##class(%File).%New(filePath)
-        Set status = file.Open("R")
-        If $$$ISERR(status) {
-            Return status
+        // Ensure file exists
+        If '##class(%File).Exists(filePath) {
+            Return $$$ERROR(5001, "File does not exist: " _ filePath)
         }
         
-        Set lineNumber = 0
+        // Initialize csvData explicitly
+        Set csvData("recordCount") = 0
+        Set csvData("hasHeader") = 0
+        
+        // Simplified file reading - just read all content first
+        Set fileContent = ""
+        Set stream = ##class(%FileCharacterStream).%New()
+        Set stream.Filename = filePath
+        
+        // Read entire file content
+        While 'stream.AtEnd {
+            Set fileContent = fileContent _ stream.Read(1000)
+        }
+        
+        // Split into lines
+        Set lineCount = $Length(fileContent, $C(10))  // Split by newline
         Set hasHeader = 0
         
-        While 'file.AtEnd {
-            Set line = file.ReadLine()
-            Set lineNumber = lineNumber + 1
+        For i = 1:1:lineCount {
+            Set line = $Piece(fileContent, $C(10), i)
+            
+            // Remove carriage return if present
+            Set line = $ZStrip(line, ">", $C(13))
             
             // Skip empty lines
             If $ZStrip(line, "<>W") = "" Continue
             
-            // Parse CSV line (simple implementation - could be enhanced for complex CSV)
+            // Parse CSV line
             Set fieldCount = $Length(line, ",")
-            If fieldCount < 2 {
-                Do ##class(Demo.Util.Logger).WriteEvent("WARNING", "Demo.Process", "Skipping invalid line " _ lineNumber _ " in " _ filePath)
-                Continue
-            }
+            If fieldCount < 2 Continue
             
             // First line with content is header if it contains non-numeric first field
-            If 'hasHeader && lineNumber = 1 {
+            If 'hasHeader && i = 1 {
                 Set firstField = $Piece(line, ",", 1)
                 If firstField '= "" && '$IsValidNum(firstField) {
                     Set hasHeader = 1
                     Set csvData("header") = line
+                    Set csvData("hasHeader") = 1
                     Continue
                 }
             }
@@ -165,23 +202,20 @@ Method ParseCSVFile(filePath As %String, Output csvData, Output recordCount As %
             // Store data row
             Set recordCount = recordCount + 1
             Set csvData("data", recordCount) = line
-            Set csvData("line", recordCount) = lineNumber
+            Set csvData("line", recordCount) = i
         }
         
-        Do file.Close()
+        // Update final counts
+        Set csvData("recordCount") = recordCount
         
         // Validate we have some data
         If recordCount = 0 {
             Return $$$ERROR(5001, "No valid data records found in CSV file")
         }
         
-        Set csvData("recordCount") = recordCount
-        Set csvData("hasHeader") = hasHeader
-        
     } Catch ex {
         Set status = ex.AsStatus()
-        Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Process", "Error parsing CSV file " _ filePath _ ": " _ ex.DisplayString())
-        Try { Do file.Close() } Catch {}
+        // Simplified error handling without logging that might fail
     }
     
     Return status

@@ -54,35 +54,49 @@ Method OnProcessInput(pInput As %FileCharacterStream, pOutput As %RegisteredObje
         Set filePath = pInput.Filename
         Set fileSize = ##class(Demo.Util.Logger).GetFileSize(filePath)
         
+        // Debug tracking
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "START", "path=" _ filePath _ " size=" _ fileSize)
+        
         Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.FileService", "Processing file: " _ fileName _ " (" _ fileSize _ " bytes)")
         Do ##class(Demo.Util.Logger).WriteFileLog("START " _ fileName _ " size=" _ fileSize _ " path=" _ filePath)
         
         // Validate CSV file format
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "VALIDATION", "starting CSV validation")
         Set valid = ##class(Demo.Util.Logger).ValidateCSVFile(filePath, .errorMsg)
         If 'valid {
+            Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "VALIDATION_FAILED", errorMsg)
             Do ..HandleFileError(fileName, filePath, "invalid", "CSV validation failed: " _ errorMsg)
             Return $$$OK
         }
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "VALIDATION_OK", "CSV format valid")
         
         // Calculate file hash for duplicate detection
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "HASH_CALC", "calculating file hash")
         Set fileHash = ##class(Demo.Util.Logger).HashFile(filePath)
         If fileHash = "" {
+            Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "HASH_FAILED", "could not calculate hash")
             Do ..HandleFileError(fileName, filePath, "error", "Failed to calculate file hash")
             Return $$$OK
         }
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "HASH_OK", "hash=" _ fileHash)
         
         Do ##class(Demo.Util.Logger).WriteFileLog("HASH " _ fileName _ " hash=" _ fileHash)
         
         // Check for duplicates
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "DUPLICATE_CHECK", "checking for duplicates")
         If ##class(Demo.Util.Logger).IsDuplicateFile(filePath, fileHash) {
+            Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "DUPLICATE_FOUND", "file is duplicate")
             Do ..HandleFileError(fileName, filePath, "duplicate", "File is a duplicate (hash: " _ fileHash _ ")")
             Return $$$OK
         }
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "DUPLICATE_OK", "file is unique")
         
         // Mark file as being processed
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "MARK_PROCESSING", "marking as processing")
         Do ##class(Demo.Util.Logger).MarkFileAsProcessed(fileName, fileHash, "processing")
         
         // Create request message for Business Process
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "CREATE_REQUEST", "creating FileProcessRequest")
         Set request = ##class(Demo.Msg.FileProcessRequest).%New()
         Set request.FilePath = filePath
         Set request.FileName = fileName
@@ -92,9 +106,11 @@ Method OnProcessInput(pInput As %FileCharacterStream, pOutput As %RegisteredObje
         Set request.RetryCount = 0
         
         // Send to Business Process
+        Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "SEND_REQUEST", "sending to " _ ..TargetConfigName)
         Set status = ..SendRequestSync(..TargetConfigName, request, .response, 300) // 5 minute timeout
         
         If $$$ISERR(status) {
+            Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "SEND_FAILED", $System.Status.GetErrorText(status))
             Do ..HandleFileError(fileName, filePath, "error", "Failed to send to Business Process: " _ $System.Status.GetErrorText(status))
             Return $$$OK
         }

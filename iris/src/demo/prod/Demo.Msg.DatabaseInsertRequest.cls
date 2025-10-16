@@ -17,6 +17,12 @@ Property CSVHeader As %String(MAXLEN = 2000);
 /// Collection of CSV data lines
 Property CSVRecords As %ArrayOfDataTypes [ Required ];
 
+/// Source file name
+Property FileName As %String(MAXLEN = 255);
+
+/// File hash for tracking
+Property FileHash As %String(MAXLEN = 64);
+
 /// Timestamp when request was submitted
 Property SubmittedAt As %TimeStamp [ Required ];
 

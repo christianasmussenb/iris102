@@ -85,15 +85,36 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
         Set mysqlOK = 0, mysqlFailed = 0, mysqlError = ""
         Set postgresOK = 0, postgresFailed = 0, postgresError = ""
         
-        // Process MySQL insertion
-        Set mysqlStatus = ..ProcessDatabaseInsertion("MySQL", ..MySQLTarget, .csvData, recordCount, .mysqlOK, .mysqlFailed, .mysqlError)
-        Set pResponse.MySQLRecordsOK = mysqlOK
-        Set pResponse.MySQLRecordsFailed = mysqlFailed
+        // Create database request for both operations
+        Set dbRequest = ##class(Demo.Msg.DatabaseInsertRequest).%New()
+        Set dbRequest.RequestId = $System.Util.CreateGUID()
+        Set dbRequest.TotalRecords = recordCount
+        Set dbRequest.SubmittedAt = ##class(Demo.Util.Logger).NowISO()
+        Set dbRequest.FileName = pRequest.FileName
+        Set dbRequest.FileHash = pRequest.FileHash
         
-        // Process PostgreSQL insertion
-        Set postgresStatus = ..ProcessDatabaseInsertion("PostgreSQL", ..PostgreSQLTarget, .csvData, recordCount, .postgresOK, .postgresFailed, .postgresError)
-        Set pResponse.PostgreSQLRecordsOK = postgresOK
-        Set pResponse.PostgreSQLRecordsFailed = postgresFailed
+        // Copy CSV data to request
+        If $Data(csvData("header")) {
+            Set dbRequest.CSVHeader = csvData("header")
+        }
+        
+        For i=1:1:recordCount {
+            If $Data(csvData("data", i)) {
+                Do dbRequest.CSVRecords.SetAt(csvData("data", i), i)
+            }
+        }
+        
+    // Process MySQL insertion (real operation)
+    Set mysqlStatus = ..ProcessDatabaseInsertion("MySQL", ..MySQLTarget, .csvData, recordCount, pRequest.FileName, pRequest.FileHash, .mysqlOK, .mysqlFailed, .mysqlError)
+        
+    Set pResponse.MySQLRecordsOK = mysqlOK
+    Set pResponse.MySQLRecordsFailed = mysqlFailed
+        
+    // Process PostgreSQL insertion (real operation)
+    Set postgresStatus = ..ProcessDatabaseInsertion("PostgreSQL", ..PostgreSQLTarget, .csvData, recordCount, pRequest.FileName, pRequest.FileHash, .postgresOK, .postgresFailed, .postgresError)
+        
+    Set pResponse.PostgreSQLRecordsOK = postgresOK
+    Set pResponse.PostgreSQLRecordsFailed = postgresFailed
         
         // Determine overall status
         Set totalOK = mysqlOK + postgresOK
@@ -222,7 +243,7 @@ Method ParseCSVFile(filePath As %String, Output csvData, Output recordCount As %
 }
 
 /// Process insertion into specified database
-Method ProcessDatabaseInsertion(dbType As %String, target As %String, ByRef csvData, recordCount As %Integer, Output recordsOK As %Integer, Output recordsFailed As %Integer, Output errorMsg As %String) As %Status
+Method ProcessDatabaseInsertion(dbType As %String, target As %String, ByRef csvData, recordCount As %Integer, fileName As %String, fileHash As %String, Output recordsOK As %Integer, Output recordsFailed As %Integer, Output errorMsg As %String) As %Status
 {
     Set status = $$$OK
     Set recordsOK = 0
@@ -238,6 +259,8 @@ Method ProcessDatabaseInsertion(dbType As %String, target As %String, ByRef csvD
         Set dbRequest.TotalRecords = recordCount
         Set dbRequest.RequestId = ##class(Demo.Util.Logger).GenerateUniqueId()
         Set dbRequest.SubmittedAt = ##class(Demo.Util.Logger).NowISO()
+        Set dbRequest.FileName = fileName
+        Set dbRequest.FileHash = fileHash
         
         // Copy CSV data to request
         If $Data(csvData("header")) {

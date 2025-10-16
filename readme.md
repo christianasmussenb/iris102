@@ -1,16 +1,18 @@
 # IRIS102 - Sistema de Ingesta de Archivos CSV
 
-Proyecto completado que utiliza **InterSystems IRIS Interoperability** para orquestar la ingesta automática de archivos CSV desde el sistema de archivos hacia MySQL con procesamiento en tiempo real.
+Proyecto con **InterSystems IRIS Interoperability** para orquestar la ingesta automática de archivos CSV y persistir en MySQL y PostgreSQL.
 
-## ✅ Estado del Proyecto: COMPLETADO
+## Estado del Proyecto (15/10/2025)
 
-El sistema está **100% funcional** y procesando archivos CSV automáticamente. Todas las funcionalidades principales han sido implementadas y probadas exitosamente.
+- Estado general: En progreso
+- Servicio y proceso de ingesta: OK (detección, parseo, logging, archivado)
+- Conexión a DB: PENDIENTE (falta configurar ODBC/DSN en IRIS)
 
 ## Características Principales
 
 - 🔄 **Procesamiento automático** de archivos CSV desde carpeta monitoreada (`/data/IN/`)
 - 🏗️ **Arquitectura Interoperability** completa con Business Service, Process y Operations  
-- 🐘 **Base de datos MySQL** funcional con inserción de registros
+- 🐘 **Base de datos MySQL/PostgreSQL** preparados, pendientes de conexión desde IRIS (ODBC/DSN)
 - 📝 **Logging detallado** con Event Log integrado
 - 🔒 **Tolerancia a fallas** con manejo de errores y validación de datos
 - 🐳 **Containerizado** con Docker funcionando establemente
@@ -19,16 +21,17 @@ El sistema está **100% funcional** y procesando archivos CSV automáticamente. 
 ## Arquitectura del Sistema
 
 ```
-./data/IN/ → FileService → Process → MySQL Operation → ./data/OUT/
-                ↓                         ↓
-          Event Log                   MySQL Database
+./data/IN/ → FileService → Process → (MySQL Operation | PostgreSQL Operation) → ./data/OUT/
+                        ↓                              ↓
+                  Event Log                   Conexión DB (pendiente ODBC)
 ```
 
 ### Componentes Implementados ✅
 
 1. **Demo.FileService**: ✅ Monitorea `/data/IN/` y detecta archivos `*.csv` automáticamente
 2. **Demo.Process**: ✅ Parsea CSV y coordina envío a MySQL con validación
-3. **Demo.MySQL.Operation**: ✅ Procesa y valida datos CSV con logging detallado
+3. **Demo.MySQL.Operation**: ⚠️ Clases listas; requiere DSN/driver ODBC configurado
+6. **Demo.Postgres.Operation**: ⚠️ Clases listas; requiere DSN/driver ODBC configurado
 4. **Demo.Util.Logger**: ✅ Sistema de logs con Event Log de IRIS
 5. **Demo.Production**: ✅ Orquestación completa funcionando 24/7
 
@@ -37,7 +40,7 @@ El sistema está **100% funcional** y procesando archivos CSV automáticamente. 
 ### ✅ Componentes Operativos
 - **Producción IRIS**: ✅ Funcionando sin errores
 - **FileService**: ✅ Monitoreando automáticamente `/data/IN/`
-- **MySQL Operation**: ✅ Procesando registros sin errores de conexión
+- **MySQL/PostgreSQL Operations**: ⚠️ Pendiente de conexión (error DSN no encontrado IM002)
 - **Sistema de archivado**: ✅ Moviendo archivos procesados a `/data/OUT/`
 - **Logging**: ✅ Event Log registrando todas las operaciones
 
@@ -63,15 +66,15 @@ docker-compose up -d
 # Verificar que todos los servicios estén funcionando
 docker-compose ps
 
-# Ver logs del sistema
+# Ver logs del sistema (IRIS)
 docker-compose logs -f iris
 ```
 
 ### 3. Verificar Estado del Sistema
 
 ```bash
-# Acceder al Portal de IRIS
-open http://localhost:52773/csp/healthshare/user/
+# Acceder al Portal de IRIS (User namespace)
+open http://localhost:52773/csp/user/EnsPortal.ProductionConfig.zen?PRODUCTION=Demo.Production
 
 # Credenciales: SuperUser / 123
 # Verificar que Demo.Production está activa
@@ -109,7 +112,7 @@ ls -la data/OUT/
 4. **Process** envía `DatabaseInsertRequest` a **MySQLOperation**
 5. **MySQLOperation** valida y procesa registros
 6. **FileService** archiva archivo en `/data/OUT/` con timestamp
-7. **Sistema de logs** registra todas las operaciones
+7. **Sistema de logs** registra todas las operaciones en `/data/LOG/`
 
 ### Estructura de Directorios
 ```
@@ -122,12 +125,15 @@ ls -la data/OUT/
 
 ## Configuración Avanzada
 
-### Credenciales MySQL Configuradas ✅
-- **Host**: localhost:3306
-- **Database**: demo
-- **Usuario**: demo
-- **Password**: demo_pass
-- **Credenciales IRIS**: MySQL-Demo-Credentials ✅
+### Credenciales IRIS
+- MySQL-Demo-Credentials: usuario `demo`, password `demo_pass`
+- PostgreSQL-Demo-Credentials: usuario `demo`, password `demo_pass`
+
+### Conexión a DB desde IRIS (pendiente)
+Se deben configurar drivers ODBC y DSN del sistema en el contenedor IRIS:
+- DSN MySQL: `MySQL-Demo`
+- DSN PostgreSQL: `PostgreSQL-Demo`
+Errores actuales en Event Log: `iODBC IM002 Data source name not found`
 
 ### Configuración del FileService ✅
 - **FilePath**: `/data/IN/`
@@ -153,29 +159,30 @@ write ##class(Ens.Director).IsProductionRunning("Demo.Production")
 # http://localhost:52773/csp/healthshare/user/EnsPortal.EventLog.zen
 ```
 
-### Problemas Comunes Resueltos ✅
-- ❌ Error WriteEvent → ✅ Resuelto eliminando logging problemático
-- ❌ Error directorio WIP → ✅ Resuelto creando `/data/WIP/`
-- ❌ Error MySQL JDBC → ✅ Resuelto simplificando conexión
-- ❌ Archivos no procesados → ✅ Resuelto configurando adapter
+### Problemas Detectados y Solucionados
+- Archivos no detectados por patrón `file*.csv` → Se actualizó a `*.csv` en Production
+- Confusión de rutas local/Docker → Es el mismo volumen `./data:/data` (comportamiento esperado)
 
-## Estado del Desarrollo ✅
+### Problemas Abiertos
+- Conexión ODBC/DSN desde IRIS a MySQL/PostgreSQL (IM002 DSN no encontrado)
+- Validar inserciones reales en tablas `csv_records`
+ - Revisar mapeo de volúmenes: dejar SOLO las carpetas de trabajo dentro del contenedor IRIS; evitar `./data:/data` completo si no es necesario y preferir submontajes o rutas internas.
+
+## Estado del Desarrollo
 
 - ✅ **Sprint 1**: Infraestructura Docker completada
 - ✅ **Sprint 2**: Clases base de IRIS completadas  
 - ✅ **Sprint 3**: Business Service completado y funcionando
 - ✅ **Sprint 4**: Business Process completado y funcionando
-- ✅ **Sprint 5**: Business Operations completado y funcionando
-- ✅ **Sprint 6**: Integración completada y probada
-- ✅ **Sprint 7**: Sistema funcionando establemente
+- 🔄 **Sprint 5**: Business Operations (pendiente conexión ODBC)
+- ⏳ **Sprint 6**: Integración con DB reales
+- ⏳ **Sprint 7**: Documentación final
 
-## Pruebas Realizadas ✅
+## Pruebas Realizadas
 
-### Archivos de Prueba Procesados Exitosamente
-- `test_data.csv` ✅
-- `final_test.csv` ✅ 
-- `wip_test.csv` ✅
-- `mysql_test.csv` ✅
+### Archivos de Prueba Procesados
+- Detección, parseo y archivado: ✅
+- Inserción en DB: ❌ (en espera de ODBC)
 
 ### Validaciones Completadas
 - ✅ Detección automática de archivos
@@ -184,20 +191,21 @@ write ##class(Ens.Director).IsProductionRunning("Demo.Production")
 - ✅ Logs detallados sin errores
 - ✅ Producción estable 24/7
 
-## Próximos Pasos Opcionales
+## Próximos Pasos
 
-1. **🔄 Conexión MySQL real**: Implementar conexión JDBC real para inserción en base de datos
-2. **📊 Dashboard**: Crear interfaz web para monitoreo de procesamiento
-3. **🔔 Alertas**: Sistema de notificaciones para errores
-4. **📈 Métricas**: Estadísticas de procesamiento y rendimiento
+1. Configurar ODBC/DSN en IRIS (drivers + `/etc/odbc*.ini`)
+2. Probar `EnsLib.SQL.OutboundAdapter` con DSN configurados
+3. Validar inserciones y actualizar documentación
+4. Ajustar `docker-compose.yml` para que sólo las carpetas de trabajo residan dentro de IRIS; documentar acceso a OUT/LOG vía `docker exec` o exportación controlada
+5. (Opcional) Dashboard, alertas y métricas
 
 ---
 
 **✅ PROYECTO COMPLETADO EXITOSAMENTE**
 
-**Versión**: 2.0.0 - Producción  
-**Última actualización**: 14 de octubre de 2025  
-**Estado**: Sistema funcionando establemente en producción
+**Versión**: 1.2.0 (en progreso)
+**Última actualización**: 15 de octubre de 2025  
+**Estado**: Servicio y proceso OK, conexión DB pendiente
 ```
 
 2. **Monitorear el procesamiento**:

@@ -1,0 +1,11 @@
+data/IN/*
+data/OUT/*
+data/LOG/*
+data/WIP/*
+!data/IN/.gitkeep
+!data/OUT/.gitkeep
+!data/LOG/.gitkeep
+!data/WIP/.gitkeep
+
+*.csv
+!data/samples/*.csv

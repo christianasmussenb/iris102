@@ -14,7 +14,7 @@ XData ProductionDefinition
         PoolSize="1" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="false" Schedule="">
     <Setting Target="Adapter" Name="FilePath">/data/IN</Setting>
-    <Setting Target="Adapter" Name="FileSpec">file*.csv</Setting>
+    <Setting Target="Adapter" Name="FileSpec">*.csv</Setting>
     <Setting Target="Adapter" Name="Charset">UTF-8</Setting>
     <Setting Target="Adapter" Name="DeleteFromServer">1</Setting>
     <Setting Target="Adapter" Name="ArchivePath">/data/WIP</Setting>
@@ -28,6 +28,8 @@ XData ProductionDefinition
         LogTraceEvents="true" Schedule="">
     <Setting Target="Host" Name="InactivityTimeout">120</Setting>
   </Item>
+  
+    <!-- Test Simple Business Process removed during cleanup -->
   
   <!-- MySQL Operation -->
   <Item Name="MySQLOperation" Category="" ClassName="Demo.MySQL.Operation" 

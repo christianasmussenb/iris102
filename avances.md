@@ -1,37 +1,72 @@
 # Avances del Proyecto IRIS102 - Sistema de Ingesta de Archivos CSV
 
-## ✅ Estado General del Proyecto: COMPLETADO
-- **Estado**: Proyecto 100% Funcional - Sistema en Producción
-- **Fecha de Inicio**: 14 de octubre de 2025
-- **Fecha de Finalización**: 14 de octubre de 2025 - 22:17
-- **Progreso**: 7/7 Sprints (100%) - Sistema completamente operativo
+Última actualización: 15 de octubre de 2025
 
-## ✅ Proyecto Finalizado Exitosamente
+## Estado General del Proyecto
+- Estado: En progreso (end-to-end casi completo)
+- Sprints completados: 4/7
+- Foco actual: Conexión real a MySQL y PostgreSQL desde IRIS (ODBC/DSN)
 
-### 🎯 Objetivos Alcanzados
-El proyecto `iris102` ha sido **completado exitosamente** con todas las funcionalidades implementadas y probadas. El sistema de orquestación de ingesta de archivos CSV está funcionando establemente en producción.
+## Resumen ejecutivo
+El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (detección, parseo y logging). La escritura en bases de datos aún no se completa porque faltan configurar drivers/DSN ODBC en el contenedor de IRIS y validar credenciales para PostgreSQL. El mapeo de volúmenes Docker `./data:/data` hace que todo lo escrito por IRIS dentro del contenedor aparezca también en la carpeta local `data/`.
 
-### 🏗️ Arquitectura Implementada
+## Arquitectura actual
 ```
-./data/IN/ → FileService → Process → MySQL Operation → ./data/OUT/
-                ↓                         ↓
-          Event Log               Validación + Logs
+./data/IN/ → FileService → Process → (MySQL Operation | PostgreSQL Operation) → ./data/OUT/
+           ↓                            ↓
+        Event Log                    (pendiente conexión real)
 ```
 
-### ✅ Componentes Finalizados
-1. **Demo.FileService**: ✅ Monitoreando `/data/IN/` automáticamente para archivos `*.csv`
-2. **Demo.Process**: ✅ Parseando CSV y coordinando envío a MySQL
-3. **Demo.MySQL.Operation**: ✅ Procesando y validando registros CSV
-4. **Demo.Util.Logger**: ✅ Sistema de logs con Event Log de IRIS
-5. **Demo.Production**: ✅ Orquestación completa funcionando 24/7
+## Componentes y estado
+- Demo.FileService: ✅ Monitoreando `/data/IN/` (FileSpec actual: `*.csv`), escribe logs y archiva a `/data/OUT/`.
+- Demo.Process: ✅ Parsea CSV, arma requests y orquesta operaciones; logging de resultados.
+- Demo.MySQL.Operation: ⚠️ Clases compiladas y configuradas con `EnsLib.SQL.OutboundAdapter`, pendiente DSN/driver ODBC y prueba de conexión.
+- Demo.Postgres.Operation: ⚠️ Ídem MySQL. En logs aparece error de DSN/driver: `SQLState IM002 - Data source name not found`.
+- Demo.Util.Logger: ✅ Escribe en `/data/LOG/event_YYYYMMDD.log` (en Docker y reflejado en local por volumen).
+- Demo.Production: ✅ En ejecución; contiene `FileService`, `FileProcessor` y `PostgreSQLOperation`/`MySQLOperation`.
 
-### 🔧 Funcionalidades Operativas
-- ✅ **Detección automática**: Archivos CSV procesados inmediatamente al aparecer
-- ✅ **Validación de datos**: Formato CSV validado (id,name,age,city)
-- ✅ **Archivado automático**: Archivos movidos a `/data/OUT/` con timestamp
-- ✅ **Logging completo**: Event Log registrando todas las operaciones
-- ✅ **Tolerancia a fallas**: Sistema estable sin errores críticos
-- ✅ **Configuración robusta**: Todos los directorios y settings aplicados
+## Avances verificados
+- Volúmenes: `./data` (local) está mapeado a `/data` (Docker) → archivos OUT y LOG aparecen en ambas rutas por diseño.
+- Procesamiento: archivos en `/data/IN/` son detectados y movidos; se generan salidas en `/data/OUT/` con sufijo de estado y logs en `/data/LOG/`.
+- Credenciales IRIS:
+  - MySQL-Demo-Credentials: existente (usuario demo / password demo_pass).
+  - PostgreSQL-Demo-Credentials: creada recientemente (usuario demo / password demo_pass).
+- Conectividad de red entre contenedores: `iris102-simple ↔ mysql` y `iris102-simple ↔ postgres` OK (ping exitoso).
+
+## Pendientes críticos (bloquean escritura en DB)
+1. Configurar ODBC en el contenedor IRIS (iODBC): instalar drivers y definir DSN del sistema.
+  - DSN requeridos por la Production:
+    - `MySQL-Demo`
+    - `PostgreSQL-Demo`
+  - Mensaje de error actual PostgreSQL: `iODBC Driver Manager: Data source name not found (IM002)`.
+2. Verificar/ajustar que `EnsLib.SQL.OutboundAdapter` use los DSN definidos y las credenciales:
+  - MySQL: `MySQL-Demo-Credentials`
+  - PostgreSQL: `PostgreSQL-Demo-Credentials`
+3. Probar inserciones reales desde las operaciones (`InsertCSVRecord`) y validar en tablas `csv_records`.
+4. Unificar y documentar el patrón de archivos a monitorear (en Production está `*.csv`; la captura del portal mostraba `file*.csv`).
+5. Alinear el target del FileService:
+  - Opción A (real): `FileProcessor` con operaciones reales (recomendada para conexión DB).
+  - Opción B (simulación): (se eliminó el flujo de simulación para limpieza del proyecto)
+6. Revisar y ajustar el mapeo de volúmenes en Docker Compose para que SOLO las carpetas de trabajo residan dentro del contenedor de IRIS (evitar montar `./data:/data` completo si no es necesario; limitar a subdirectorios requeridos o manejar rutas internas puras).
+
+## Próximos pasos propuestos
+1. ODBC y DSN en IRIS
+  - Instalar drivers ODBC para MySQL y PostgreSQL en el contenedor IRIS (paquetes y librerías `.so`).
+  - Configurar `/etc/odbcinst.ini` (drivers) y `/etc/odbc.ini` (DSN del sistema).
+  - Validar con `iodbctest` desde el contenedor.
+2. Credenciales y Production
+  - Confirmar que ambos `*-Credentials` existen en IRIS y están asignados a cada Operation.
+  - Reiniciar la Production y revisar el Event Log.
+3. Pruebas end-to-end
+  - Copiar `data/samples/file*.csv` a `data/IN/` y verificar inserciones en MySQL y PostgreSQL.
+4. Documentación
+  - Añadir guía rápida de configuración ODBC/DSN en este repo.
+ 5. Volúmenes Docker
+   - Proponer y aplicar ajuste de `docker-compose.yml` para que las carpetas de trabajo queden sólo en el Docker de IRIS; documentar implicancias (logs/OUT visibles vía comandos `docker exec` o exportaciones controladas).
+
+## Notas
+- La salida `__failed.` en `/data/OUT/` actualmente indica fallo por conexión a DB, no por el parser ni por el servicio.
+- Los logs de eventos de IRIS confirman que los hosts de operación inician pero fallan al conectar por DSN no encontrado.
 
 ## Resumen de Sprints Completados
 

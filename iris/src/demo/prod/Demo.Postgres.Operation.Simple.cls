@@ -1,18 +1,19 @@
-/// Demo.MySQL.Operation - Business Operation for MySQL database insertions
-Class Demo.MySQL.Operation Extends Ens.BusinessOperation
+/// DEPRECATED: Simple variant retained only for reference; not used by the Production.
+/// Renamed to avoid class name conflicts with the active Demo.Postgres.Operation.
+Class Demo.Postgres.OperationSimpleDeprecated Extends Ens.BusinessOperation
 {
 
 /// SQL Adapter for database connections
 Parameter ADAPTER = "EnsLib.SQL.OutboundAdapter";
 
-/// MySQL Connection Settings configured via adapter settings
-Property MySQLHost As %String [ InitialExpression = "localhost" ];
+/// PostgreSQL Connection Settings configured via adapter settings
+Property PostgreSQLHost As %String [ InitialExpression = "localhost" ];
 
-Property MySQLPort As %String [ InitialExpression = "3306" ];
+Property PostgreSQLPort As %String [ InitialExpression = "5432" ];
 
-Property MySQLDatabase As %String [ InitialExpression = "demo" ];
+Property PostgreSQLDatabase As %String [ InitialExpression = "demo" ];
 
-Property MySQLCredentials As %String [ InitialExpression = "MySQL-Demo-Credentials" ];
+Property PostgreSQLCredentials As %String [ InitialExpression = "PostgreSQL-Demo-Credentials" ];
 
 /// Handle database operation requests
 Method OnMessage(pRequest As Demo.Msg.DatabaseInsertRequest, Output pResponse As Demo.Msg.DatabaseInsertResponse) As %Status
@@ -28,7 +29,7 @@ Method ProcessDatabaseInsert(pRequest As Demo.Msg.DatabaseInsertRequest, Output 
     
     Try {
         // Initialize response
-        Set pResponse.DatabaseType = "MySQL"
+        Set pResponse.DatabaseType = "PostgreSQL"
         Set pResponse.RequestId = pRequest.RequestId
         Set pResponse.TotalRecords = pRequest.TotalRecords
         Set pResponse.RecordsInserted = 0
@@ -36,7 +37,7 @@ Method ProcessDatabaseInsert(pRequest As Demo.Msg.DatabaseInsertRequest, Output 
         Set pResponse.ProcessedAt = ##class(Demo.Util.Logger).NowISO()
         Set pResponse.Status = "processing"
         
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.MySQL.Operation", "Starting MySQL insertion for " _ pRequest.TotalRecords _ " records")
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Postgres.Operation", "Starting PostgreSQL insertion for " _ pRequest.TotalRecords _ " records")
         
         // Validate request
         If pRequest.TotalRecords = 0 {
@@ -45,21 +46,21 @@ Method ProcessDatabaseInsert(pRequest As Demo.Msg.DatabaseInsertRequest, Output 
             Return $$$OK
         }
         
-        // Process records with real database insertions
+        // Process records with simulated database insertions
         Set totalInserted = 0
         Set totalFailed = 0
         
         For i=1:1:pRequest.TotalRecords {
             Set csvLine = pRequest.CSVRecords.GetAt(i)
             If csvLine '= "" {
-                // Parse and insert record
+                // Parse and simulate insertion
                 Set insertStatus = ..InsertCSVRecord(csvLine, pRequest.FileName, pRequest.FileHash)
                 If $$$ISOK(insertStatus) {
                     Set totalInserted = totalInserted + 1
-                    Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.MySQL.Operation", "Inserted record " _ i _ ": " _ csvLine)
+                    Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Postgres.Operation", "Simulated PostgreSQL insert record " _ i _ ": " _ csvLine)
                 } Else {
                     Set totalFailed = totalFailed + 1
-                    Do ##class(Demo.Util.Logger).WriteEvent("WARNING", "Demo.MySQL.Operation", "Failed to insert record " _ i _ ": " _ csvLine _ " - " _ $System.Status.GetErrorText(insertStatus))
+                    Do ##class(Demo.Util.Logger).WriteEvent("WARNING", "Demo.Postgres.Operation", "Failed simulation record " _ i _ ": " _ csvLine _ " - " _ $System.Status.GetErrorText(insertStatus))
                 }
             }
         }
@@ -68,20 +69,20 @@ Method ProcessDatabaseInsert(pRequest As Demo.Msg.DatabaseInsertRequest, Output 
         Set pResponse.RecordsFailed = totalFailed
         Set pResponse.Status = "completed"
         
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.MySQL.Operation", "MySQL operation completed: " _ totalInserted _ " processed, " _ totalFailed _ " failed")
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Postgres.Operation", "PostgreSQL operation completed: " _ totalInserted _ " processed, " _ totalFailed _ " failed")
         
     } Catch ex {
         Set status = ex.AsStatus()
         Set pResponse.Status = "error"
-        Set pResponse.ErrorMessage = "MySQL operation exception: " _ ex.DisplayString()
+        Set pResponse.ErrorMessage = "PostgreSQL operation exception: " _ ex.DisplayString()
         
-        Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.MySQL.Operation", "Exception during MySQL operation: " _ ex.DisplayString())
+        Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Postgres.Operation", "Exception during PostgreSQL operation: " _ ex.DisplayString())
     }
     
     Return status
 }
 
-/// Insert a CSV record into MySQL database (simulated for demo)
+/// Insert a CSV record into PostgreSQL database (simulated for demo)
 Method InsertCSVRecord(csvLine As %String, fileName As %String, fileHash As %String) As %Status
 {
     Set status = $$$OK
@@ -107,16 +108,16 @@ Method InsertCSVRecord(csvLine As %String, fileName As %String, fileHash As %Str
             Return $$$ERROR($$$EnsErrGeneral, "Invalid age value: " _ age)
         }
         
-        // Execute real MySQL insertion
+        // Execute real PostgreSQL insertion
         Set sql = "INSERT INTO csv_records (csv_id, name, age, city, source_file, file_hash) VALUES (?, ?, ?, ?, ?, ?)"
         Set stmt = ..Adapter.CreateStatement()
         Set result = stmt.%Execute(csvId, name, age, city, fileName, fileHash)
         
         If result.%SQLCODE < 0 {
-            Return $$$ERROR($$$EnsErrGeneral, "MySQL insertion failed: " _ result.%Message)
+            Return $$$ERROR($$$EnsErrGeneral, "PostgreSQL insertion failed: " _ result.%Message)
         }
         
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.MySQL.Operation", "MySQL Insert SUCCESS: " _ csvId _ "," _ name _ "," _ age _ "," _ city _ " from " _ fileName)
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Postgres.Operation", "PostgreSQL Insert SUCCESS: " _ csvId _ "," _ name _ "," _ age _ "," _ city _ " from " _ fileName)
         
     } Catch ex {
         Set status = ex.AsStatus()
@@ -125,47 +126,23 @@ Method InsertCSVRecord(csvLine As %String, fileName As %String, fileHash As %Str
     Return status
 }
 
-/// Test MySQL connection (placeholder)
+/// Test PostgreSQL connection (simulated for demo)
 Method TestConnection() As %Status
 {
     Set status = $$$OK
     
     Try {
-        // Get credentials
-        Set credentials = ##class(Ens.Config.Credentials).GetCredentialsObj(..MySQLCredentials)
-        If '$IsObject(credentials) {
-            Return $$$ERROR($$$EnsErrGeneral, "Cannot find credentials: " _ ..MySQLCredentials)
-        }
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Postgres.Operation", "Simulating PostgreSQL connection test...")
         
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.MySQL.Operation", "MySQL connection test - credentials found for user: " _ credentials.Username)
-        
-        // For now, just simulate successful connection
-        // In a real implementation, this would test the actual MySQL connection
+        // Simulate successful connection test
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Postgres.Operation", "SIMULATED PostgreSQL connection test successful")
         
     } Catch ex {
         Set status = ex.AsStatus()
-        Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.MySQL.Operation", "Connection test failed: " _ ex.DisplayString())
+        Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Postgres.Operation", "PostgreSQL connection test exception: " _ ex.DisplayString())
     }
     
     Return status
-}
-
-/// Get operation statistics
-Method GetStats() As %String
-{
-    Set stats = ""
-    
-    Try {
-        Set stats = stats _ "Operation: Demo.MySQL.Operation (Simple)" _ $C(13,10)
-        Set stats = stats _ "MySQL Host: " _ ..MySQLHost _ ":" _ ..MySQLPort _ $C(13,10)
-        Set stats = stats _ "MySQL Database: " _ ..MySQLDatabase _ $C(13,10)
-        Set stats = stats _ "Credentials: " _ ..MySQLCredentials _ $C(13,10)
-        
-    } Catch ex {
-        Set stats = "Error getting stats: " _ ex.DisplayString()
-    }
-    
-    Return stats
 }
 
 }

@@ -58,7 +58,7 @@ El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (det
   - Confirmar que ambos `*-Credentials` existen en IRIS y están asignados a cada Operation.
   - Reiniciar la Production y revisar el Event Log.
 3. Pruebas end-to-end
-  - Copiar `data/samples/file*.csv` a `data/IN/` y verificar inserciones en MySQL y PostgreSQL.
+  - Agregar archivos CSV de ejemplo a `data/IN/` (la carpeta `data/samples/` quedó vacía tras la limpieza) y verificar inserciones en MySQL y PostgreSQL.
 4. Documentación
   - Añadir guía rápida de configuración ODBC/DSN en este repo.
  5. Volúmenes Docker

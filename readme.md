@@ -184,6 +184,8 @@ write ##class(Ens.Director).IsProductionRunning("Demo.Production")
 - Detección, parseo y archivado: ✅
 - Inserción en DB: ❌ (en espera de ODBC)
 
+Nota: El repositorio fue limpiado de archivos CSV de ejemplo. La carpeta `data/samples/` permanece vacía para que puedas agregar tus propios ejemplos.
+
 ### Validaciones Completadas
 - ✅ Detección automática de archivos
 - ✅ Procesamiento sin errores de conexión
@@ -247,7 +249,7 @@ iris102/
 │   ├── IN/                    # Archivos CSV de entrada
 │   ├── OUT/                   # Archivos procesados
 │   ├── LOG/                   # Logs diarios
-│   └── samples/               # Archivos de ejemplo
+│   └── samples/               # Carpeta vacía para ejemplos (usar .gitkeep)
 └── avances.md                 # Seguimiento del proyecto
 ```
 

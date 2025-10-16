@@ -35,10 +35,8 @@ XData ProductionDefinition
   <Item Name="MySQLOperation" Category="" ClassName="Demo.MySQL.Operation" 
         PoolSize="1" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="true" Schedule="">
-    <Setting Target="Adapter" Name="DSN">MySQL-Demo</Setting>
-    <Setting Target="Adapter" Name="Credentials">MySQL-Demo-Credentials</Setting>
-    <Setting Target="Adapter" Name="JDBCDriver">com.mysql.cj.jdbc.Driver</Setting>
-    <Setting Target="Adapter" Name="JDBCURL">jdbc:mysql://mysql:3306/demo?useSSL=false&amp;allowPublicKeyRetrieval=true</Setting>
+        <Setting Target="Adapter" Name="DSN">MySQL-Demo</Setting>
+        <Setting Target="Adapter" Name="Credentials">MySQL-Demo-Credentials</Setting>
     <Setting Target="Host" Name="RetryCount">3</Setting>
     <Setting Target="Host" Name="RetryInterval">2</Setting>
   </Item>
@@ -47,10 +45,8 @@ XData ProductionDefinition
   <Item Name="PostgreSQLOperation" Category="" ClassName="Demo.Postgres.Operation" 
         PoolSize="1" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="true" Schedule="">
-    <Setting Target="Adapter" Name="DSN">PostgreSQL-Demo</Setting>
-    <Setting Target="Adapter" Name="Credentials">PostgreSQL-Demo-Credentials</Setting>
-    <Setting Target="Adapter" Name="JDBCDriver">org.postgresql.Driver</Setting>
-    <Setting Target="Adapter" Name="JDBCURL">jdbc:postgresql://postgres:5432/demo?sslmode=disable</Setting>
+        <Setting Target="Adapter" Name="DSN">PostgreSQL-Demo</Setting>
+        <Setting Target="Adapter" Name="Credentials">PostgreSQL-Demo-Credentials</Setting>
     <Setting Target="Host" Name="RetryCount">3</Setting>
     <Setting Target="Host" Name="RetryInterval">2</Setting>
   </Item>

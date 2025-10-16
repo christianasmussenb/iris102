@@ -8,7 +8,7 @@ services:
     container_name: iris102
     hostname: iris102
     environment:
-      - ISC_PASSWORD=SYS
+      - ISC_PASSWORD=${ISC_PASSWORD:-123}
       - IN_DIR=/data/IN
       - OUT_DIR=/data/OUT
       - LOG_DIR=/data/LOG
@@ -30,6 +30,7 @@ services:
       - iris-data:/usr/irissys/mgr
     depends_on:
       - mysql
+      - postgres
     restart: unless-stopped
 
   mysql:
@@ -55,6 +56,7 @@ services:
       - "8080:8080"
     depends_on:
       - mysql
+      - postgres
     restart: unless-stopped
 
   # PostgreSQL local (solo para pruebas - comentar si usas externo)
@@ -72,8 +74,6 @@ services:
       - ./sql/postgres_init.sql:/docker-entrypoint-initdb.d/01-init.sql
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
-    profiles:
-      - local-testing  # Para activar: docker-compose --profile local-testing up
 
 volumes:
   iris-data:

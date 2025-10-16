@@ -4,6 +4,23 @@ Class Demo.Postgres.Operation Extends Ens.BusinessOperation
 
 /// Adapter type for SQL operations
 Parameter ADAPTER = "EnsLib.SQL.OutboundAdapter";
+/// Simple ODBC connection test using a temporary adapter instance
+ClassMethod TestConnection() As %Status
+{
+    Set sc = $$$OK
+    Try {
+        Set adapter = ##class(EnsLib.SQL.OutboundAdapter).%New()
+        Set adapter.DSN = "PostgreSQL-Demo"
+        Set adapter.Credentials = "PostgreSQL-Demo-Credentials"
+        Do adapter.Connect()
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO","Demo.Postgres.Operation","ODBC connect OK to DSN PostgreSQL-Demo")
+        Do adapter.Disconnect()
+    } Catch ex {
+        Set sc = ex.AsStatus()
+        Do ##class(Demo.Util.Logger).WriteEvent("ERROR","Demo.Postgres.Operation","ODBC connect failed: " _ ex.DisplayString())
+    }
+    Quit sc
+}
 
 /// Batch size for bulk insertions
 Property BatchSize As %Integer [ InitialExpression = 100 ];

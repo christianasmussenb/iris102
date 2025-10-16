@@ -4,6 +4,23 @@ Class Demo.MySQL.Operation Extends Ens.BusinessOperation
 
 /// SQL Adapter for database connections
 Parameter ADAPTER = "EnsLib.SQL.OutboundAdapter";
+/// Simple ODBC connection test using a temporary adapter instance
+ClassMethod TestConnection() As %Status
+{
+    Set sc = $$$OK
+    Try {
+        Set adapter = ##class(EnsLib.SQL.OutboundAdapter).%New()
+        Set adapter.DSN = "MySQL-Demo"
+        Set adapter.Credentials = "MySQL-Demo-Credentials"
+        Do adapter.Connect()
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO","Demo.MySQL.Operation","ODBC connect OK to DSN MySQL-Demo")
+        Do adapter.Disconnect()
+    } Catch ex {
+        Set sc = ex.AsStatus()
+        Do ##class(Demo.Util.Logger).WriteEvent("ERROR","Demo.MySQL.Operation","ODBC connect failed: " _ ex.DisplayString())
+    }
+    Quit sc
+}
 
 /// MySQL Connection Settings configured via adapter settings
 Property MySQLHost As %String [ InitialExpression = "localhost" ];
@@ -125,30 +142,7 @@ Method InsertCSVRecord(csvLine As %String, fileName As %String, fileHash As %Str
     Return status
 }
 
-/// Test MySQL connection (placeholder)
-Method TestConnection() As %Status
-{
-    Set status = $$$OK
-    
-    Try {
-        // Get credentials
-        Set credentials = ##class(Ens.Config.Credentials).GetCredentialsObj(..MySQLCredentials)
-        If '$IsObject(credentials) {
-            Return $$$ERROR($$$EnsErrGeneral, "Cannot find credentials: " _ ..MySQLCredentials)
-        }
-        
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.MySQL.Operation", "MySQL connection test - credentials found for user: " _ credentials.Username)
-        
-        // For now, just simulate successful connection
-        // In a real implementation, this would test the actual MySQL connection
-        
-    } Catch ex {
-        Set status = ex.AsStatus()
-        Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.MySQL.Operation", "Connection test failed: " _ ex.DisplayString())
-    }
-    
-    Return status
-}
+// ...existing code...
 
 /// Get operation statistics
 Method GetStats() As %String

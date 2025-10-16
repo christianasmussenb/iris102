@@ -7,12 +7,17 @@ Proyecto con **InterSystems IRIS Interoperability** para orquestar la ingesta au
 - Estado general: En progreso (pipeline de archivos estable)
 - Servicio y proceso de ingesta: OK (detección, parseo, logging, archivado)
 - Producción IRIS: Inicia correctamente con installer corregido
-- Conexión a DB: PENDIENTE (falta configurar ODBC/DSN en IRIS)
+- Conexión a DB: ODBC OK (DSN MySQL-Demo y PostgreSQL-Demo verificados); JDBC listo (JRE y JARs instalados, falta crear conexiones en SQL Gateway)
 
 ### Novedades 16/10/2025
-- Corregido `iris/Installer.cls` (se eliminaron macros no definidas y se usó API estándar `$SYSTEM.Status` y `Ens.Director.IsProductionRunning`).
-- Corregidos storages de mensajes `Demo.Msg.DBOperationRequest/Response` para usar `^Ens.MessageBody*` evitando errores de compilación.
-- Revalidado: Importación, compilación completa y arranque automático de `Demo.Production` OK.
+- Fix Installer: `iris/Installer.cls` sin macros no definidas; uso de `$SYSTEM.Status` y `Ens.Director.IsProductionRunning`.
+- Fix Mensajes: Storages de `Demo.Msg.DBOperationRequest/Response` en `^Ens.MessageBody*` (compilación limpia).
+- Infra DB: Habilitado servicio PostgreSQL en docker-compose y dependencias entre contenedores.
+- ODBC: Instalados drivers (MariaDB y PostgreSQL) y configurados DSN del sistema (`/etc/odbc*.ini`).
+- ARM64: Ajustados paths de librerías ODBC para arquitectura aarch64 en Dockerfile.
+- Verificación ODBC: Conexiones MySQL-Demo y PostgreSQL-Demo OK (SELECT 1 desde contenedor IRIS).
+- JDBC: Agregados JARs (MariaDB y PostgreSQL) y JRE (OpenJDK 11); classpath configurado. Listo para crear conexiones en SQL Gateway.
+ - Installer: Automatiza la creación de Object Gateways JDBC (JDBC-MySQL y JDBC-PostgreSQL) en %SYS para que el Portal los muestre listos.
 
 ## Características Principales
 
@@ -46,7 +51,7 @@ Proyecto con **InterSystems IRIS Interoperability** para orquestar la ingesta au
 ### ✅ Componentes Operativos
 - **Producción IRIS**: ✅ Funcionando sin errores
 - **FileService**: ✅ Monitoreando automáticamente `/data/IN/`
-- **MySQL/PostgreSQL Operations**: ⚠️ Pendiente de conexión (error DSN no encontrado IM002)
+- **MySQL/PostgreSQL Operations**: ✅ Conectividad ODBC disponible (DSN configurados). Pendiente validar inserciones reales y tablas.
 - **Sistema de archivado**: ✅ Moviendo archivos procesados a `/data/OUT/`
 - **Logging**: ✅ Event Log registrando todas las operaciones
 
@@ -147,15 +152,15 @@ ls -la data/OUT/
 - MySQL-Demo-Credentials: usuario `demo`, password `demo_pass`
 - PostgreSQL-Demo-Credentials: usuario `demo`, password `demo_pass`
 
-### Conexión a DB desde IRIS (pendiente)
-Se deben configurar drivers ODBC y DSN del sistema en el contenedor IRIS para habilitar las operaciones SQL reales:
-- DSN MySQL sugerido: `MySQL-Demo`
-- DSN PostgreSQL sugerido: `PostgreSQL-Demo`
-
-Notas:
-- Ajustar `/etc/odbcinst.ini` y `/etc/odbc.ini` dentro del contenedor IRIS.
-- Probar la conectividad con `EnsLib.SQL.OutboundAdapter` en `Demo.MySQL.Operation`/`Demo.Postgres.Operation`.
-- Error típico si falta DSN: `iODBC IM002 Data source name not found`.
+### Conexión a DB desde IRIS
+- ODBC del sistema configurado en el contenedor IRIS:
+      - DSN MySQL: `MySQL-Demo`
+      - DSN PostgreSQL: `PostgreSQL-Demo`
+- Verificación ODBC (ejecutada): SELECT 1 OK en ambos DSN desde el contenedor IRIS.
+- JDBC listo para SQL Gateway en Portal IRIS:
+      - JAR MySQL (MariaDB): `/opt/irisapp/jdbc/mariadb-java-client.jar` — Driver `com.mysql.cj.jdbc.Driver`
+      - JAR PostgreSQL: `/opt/irisapp/jdbc/postgresql.jar` — Driver `org.postgresql.Driver`
+- Siguiente paso: Crear conexiones JDBC en SQL Gateway y probar "Test Connection" desde el Portal.
 
 ### Configuración del FileService ✅
 - **FilePath**: `/data/IN/`
@@ -215,12 +220,23 @@ Nota: El repositorio fue limpiado de archivos CSV de ejemplo. La carpeta `data/s
 - ✅ Logs detallados sin errores
 - ✅ Producción estable 24/7
 
-## Próximos Pasos
+## Próximos Pasos (Siguiente Sprint)
 
-1. Configurar ODBC/DSN en IRIS (drivers + `/etc/odbc*.ini`).
-2. Probar `EnsLib.SQL.OutboundAdapter` con DSN configurados en `Demo.MySQL.Operation`/`Demo.Postgres.Operation`.
-3. Validar inserciones en DB y actualizar documentación (tablas, mapeos, ejemplos de consultas).
-4. Opcional: Dashboard/alertas/métricas.
+1. Configurar conexiones JDBC en SQL Gateway (Portal IRIS) para MySQL y PostgreSQL y validar "Test Connection".
+2. Validar inserciones reales desde las Operations:
+      - Asegurar tablas objetivo (MySQL: `csv_records`; PostgreSQL: `demo_data`).
+      - Ejecutar flujo end-to-end y verificar registros.
+3. Automatizar (opcional): creación de SQL Gateway y credenciales desde código/installer.
+4. Añadir pruebas de humo (SELECT 1) invocables desde ObjectScript y documentarlas.
+5. Actualizar documentación con ejemplos de consultas y troubleshooting de SQL Gateway.
+
+---
+
+## Cierre de Sprint (16/10/2025)
+
+- Objetivo: Habilitar conectividad a DB y preparar pruebas reales.
+- Hechos: ODBC verificado; JDBC listo; Object Gateways JDBC creados; orden de arranque corregido.
+- Pendientes: Crear automáticamente las “SQL Gateway Connections” JDBC en Portal y validar inserciones reales end-to-end.
 
 ---
 
@@ -229,7 +245,11 @@ Nota: El repositorio fue limpiado de archivos CSV de ejemplo. La carpeta `data/s
 - 2025-10-16
       - Fix: `Installer.cls` sin macros no definidas; uso de `$SYSTEM.Status` y `Ens.Director.IsProductionRunning`.
       - Fix: Storage de mensajes en `^Ens.MessageBody*` para evitar errores #5477.
-      - Docs: Instrucciones para re-ejecutar instalador y estado actualizados.
+      - Infra: Postgres habilitado por defecto en docker-compose; dependencias entre servicios.
+      - ODBC: Drivers instalados y DSN del sistema creados (MySQL-Demo, PostgreSQL-Demo). SELECT 1 OK desde contenedor IRIS.
+      - ARM64: Ajuste automático de rutas de librerías ODBC en Dockerfile para aarch64.
+      - JDBC: JRE instalado y JARs agregados (MariaDB y PostgreSQL) con classpath. Listo para SQL Gateway.
+      - Docs: Guía actualizada con estado y próximos pasos.
 
 ---
 

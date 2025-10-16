@@ -2,13 +2,15 @@
 
 ## Estado Actual del Proyecto
 
-### ✅ Completado (29% del proyecto)
+### ✅ Completado (estado actualizado)
 - **Sprint 1**: Infraestructura Docker completa
 - **Sprint 2**: Clases base ObjectScript implementadas
+- **Sprint 3**: Business Service completo (detección automática y archivado)
+- **Sprint 4**: Business Process completo (parser y orquestación)
 
-### 🔄 Siguiente Paso Inmediato: Validación Sprint 2
+### 🔄 Siguiente Paso Inmediato: Validación de inserciones DB
 
-**CRÍTICO**: Antes de continuar al Sprint 3, debemos verificar que las clases implementadas funcionan correctamente.
+**CRÍTICO**: Con ODBC verificado dentro del contenedor IRIS, se debe validar inserciones reales en MySQL y PostgreSQL y configurar SQL Gateway (JDBC) en el Portal.
 
 ## Plan de Acción Recomendado
 
@@ -29,38 +31,26 @@ docker compose ps
 docker compose logs iris
 ```
 
-#### 1.2 Testing de Clases Base
+#### 1.2 Testing de Conectividad y Operaciones
 ```bash
 # Acceder a IRIS
 docker exec -it iris102 iris session iris -U DEMO
 
-# Ejecutar testing según TESTING_SPRINT2.md
+# Verificar que la Production está activa y revisar logs/DSN
+# Luego ejecutar flujo con CSV de ejemplo y comprobar inserciones.
 ```
 
-**Criterios de aceptación Sprint 2**:
-- [ ] Todas las clases se compilan sin errores
-- [ ] Production se carga correctamente
-- [ ] Utilidades de logging funcionan
-- [ ] Mensajes se crean y validan
-- [ ] Conexiones DB configuradas
+**Criterios de aceptación (Siguiente Sprint)**:
+- [ ] Conexiones ODBC operativas (ya verificado con SELECT 1)
+- [ ] Conexiones JDBC creadas y validadas en SQL Gateway
+- [ ] Inserciones reales verificadas en MySQL (`csv_records`) y PostgreSQL (`demo_data`)
+- [ ] Documentación actualizada con consultas y troubleshooting
 
-### FASE 2: Sprint 3 - Business Service Completo (2-3 días)
+### FASE 2: Conexión JDBC/SQL Gateway (0.5 día)
 
 Una vez validado Sprint 2, implementar:
 
-#### 3.1 Demo.FileService Completo
-**Objetivo**: Detectar, procesar y mover archivos CSV automáticamente
-
-**Funcionalidades a implementar**:
-- ✅ Configuración EnsLib.File.InboundAdapter (ya hecho)
-- 🔨 Detección automática de archivos `file*.csv`
-- 🔨 Cálculo de hash SHA256 para duplicados
-- 🔨 Validación de formato CSV
-- 🔨 Creación de FileProcessRequest
-- 🔨 Envío a Demo.Process
-- 🔨 Manejo de respuesta
-- 🔨 Movimiento a /data/OUT/ con renombrado
-- 🔨 Logging completo del proceso
+**Objetivo**: Crear conexiones en SQL Gateway (JDBC) para MySQL y PostgreSQL y validar prueba de conexión desde Portal.
 
 #### 3.2 Integración con Utilidades Existentes
 - Usar Demo.Util.Logger para hash y validación
@@ -76,7 +66,7 @@ cp data/samples/file1.csv data/IN/
 # Verificar logs en data/LOG/
 ```
 
-### FASE 3: Sprint 4 - Business Process (3-4 días)
+### FASE 3: Validación de inserciones (1-2 días)
 
 #### 4.1 Demo.Process - Parser CSV Completo
 - Parser CSV robusto con manejo de errores
@@ -90,7 +80,7 @@ cp data/samples/file1.csv data/IN/
 - Cálculo de métricas (total, ok, failed)
 - Determinación de status final (ok/partial/error)
 
-### FASE 4: Sprint 5 - Operations Database (3-4 días)
+### FASE 4: Automatización y pruebas de humo (0.5 día)
 
 #### 5.1 Demo.MySQL.Operation Completo
 - Configuración JDBC para MySQL
@@ -102,7 +92,7 @@ cp data/samples/file1.csv data/IN/
 - Manejo de SSL para conexiones externas
 - Sistema de reintentos independiente
 
-### FASE 5: Sprints 6-7 - Integración y Documentación (2-3 días)
+### FASE 5: Documentación y mejoras (0.5-1 día)
 
 ## Decisiones Arquitectónicas Pendientes
 

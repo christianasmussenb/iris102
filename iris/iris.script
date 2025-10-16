@@ -38,6 +38,16 @@ if '##class(Config.Namespaces).Exists(ns) {
 // Switch to DEMO namespace
 zn "DEMO"
 
+// Enable Interoperability first (required for Ens.* during compilation)
+write "Enabling Interoperability...",!
+set status = ##class(Ens.Director).EnableNamespace($namespace, 1)
+if $$$ISERR(status) {
+    write "Error enabling Interoperability: "
+    do $System.Status.DisplayError(status)
+} else {
+    write "Interoperability enabled successfully",!
+}
+
 // Import and compile the installer
 write "Importing Installer.cls...",!
 set status = $system.OBJ.Load("/opt/irisapp/Installer.cls","ck")
@@ -56,16 +66,6 @@ if $$$ISERR(status) {
     do $System.Status.DisplayError(status)
 } else {
     write "Installer completed successfully",!
-}
-
-// Enable Interoperability
-write "Enabling Interoperability...",!
-set status = ##class(Ens.Director).EnableNamespace($namespace, 1)
-if $$$ISERR(status) {
-    write "Error enabling Interoperability: "
-    do $System.Status.DisplayError(status)
-} else {
-    write "Interoperability enabled successfully",!
 }
 
 write "IRIS initialization completed successfully!",!

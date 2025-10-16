@@ -19,6 +19,10 @@ ClassMethod Run() As %Status
     Set status = ..CompileAll()
     If $SYSTEM.Status.IsError(status) Quit
         
+        // Create SQL Gateway connections (JDBC) so they appear in the Portal
+        Set status = ..SetupSQLGateway()
+        If $SYSTEM.Status.IsError(status) Quit
+
         // Create and configure the Production
     Set status = ..SetupProduction()
     If $SYSTEM.Status.IsError(status) Quit
@@ -31,6 +35,89 @@ ClassMethod Run() As %Status
         Do $System.Status.DisplayError(status)
     }
     
+    Return status
+}
+
+/// Create or update SQL Gateway connections for JDBC (MySQL, PostgreSQL)
+ClassMethod SetupSQLGateway() As %Status
+{
+    Set status = 1
+    Try {
+        Write "Setting up SQL Gateway connections (JDBC)...",!
+
+        // Ensure we are in %SYS to manage Config classes
+        Set oldNs = $namespace
+        If oldNs '= "%SYS" {
+            zn "%SYS"
+        }
+
+        // Read environment / defaults
+        Set javaHome = $System.Util.GetEnviron("JAVA_HOME", "/usr/lib/jvm/java-11-openjdk-amd64")
+        Set mysqlHost = $System.Util.GetEnviron("MYSQL_HOST", "mysql")
+        Set mysqlPort = +$System.Util.GetEnviron("MYSQL_PORT", 3306)
+        Set pgHost = $System.Util.GetEnviron("PG_HOST", "postgres")
+        Set pgPort = +$System.Util.GetEnviron("PG_PORT", 5432)
+
+        // Classpaths inside the container
+        Set mysqlJar = "/opt/irisapp/jdbc/mariadb-java-client.jar"
+        Set pgJar = "/opt/irisapp/jdbc/postgresql.jar"
+
+        // Create or update JDBC-MySQL
+        Do ..EnsureGateway("JDBC-MySQL", "JDBC", mysqlHost, mysqlPort, mysqlJar, javaHome)
+
+        // Create or update JDBC-PostgreSQL
+        Do ..EnsureGateway("JDBC-PostgreSQL", "JDBC", pgHost, pgPort, pgJar, javaHome)
+
+        Write "SQL Gateway setup complete.",!
+
+        // Restore previous namespace
+        If $namespace '= oldNs {
+            zn oldNs
+        }
+
+    } Catch ex {
+        Set status = ex.AsStatus()
+        Write "Error setting up SQL Gateway: "
+        Do $System.Status.DisplayError(status)
+    }
+    Return status
+}
+
+/// Idempotent helper: create or update a Config.Gateways entry
+ClassMethod EnsureGateway(name As %String, type As %String, address As %String, port As %Integer, classPath As %String, javaHome As %String = "") As %Status
+{
+    // Initialize locals
+    Set status = 1, sc = 1
+    Try {
+        // Try to get existing gateway into local array
+        Set sc = ##class(Config.Gateways).Get(name, .gw)
+        If '$SYSTEM.Status.IsError(sc) {
+            // Update existing
+            Set gw("Name") = name
+            Set gw("Type") = type
+            If classPath'="" Set gw("ClassPath") = classPath
+            If javaHome'="" Set gw("JavaHome") = javaHome
+            If address'="" Set gw("Address") = address
+            If +port>0 Set gw("Port") = +port
+            Set sc = ##class(Config.Gateways).Modify(name, .gw)
+            If $SYSTEM.Status.IsError(sc) Return sc
+            Return sc
+        }
+
+        // Create new if not found
+        Set obj = ##class(Config.Gateways).%New()
+        Set obj.Name = name
+        Set obj.Type = type
+        If classPath'="" Set obj.ClassPath = classPath
+        If javaHome'="" Set obj.JavaHome = javaHome
+        If address'="" Set obj.Address = address
+        If +port>0 Set obj.Port = +port
+        Set sc = obj.%Save()
+        Return sc
+
+    } Catch ex {
+        Set status = ex.AsStatus()
+    }
     Return status
 }
 

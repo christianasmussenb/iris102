@@ -1,14 +1,14 @@
 # Avances del Proyecto IRIS102 - Sistema de Ingesta de Archivos CSV
 
-Última actualización: 15 de octubre de 2025
+Última actualización: 16 de octubre de 2025
 
 ## Estado General del Proyecto
 - Estado: En progreso (end-to-end casi completo)
 - Sprints completados: 4/7
-- Foco actual: Conexión real a MySQL y PostgreSQL desde IRIS (ODBC/DSN)
+- Foco actual: Validación de inserciones reales (ODBC verificado) y creación de conexiones JDBC en SQL Gateway
 
 ## Resumen ejecutivo
-El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (detección, parseo y logging). La escritura en bases de datos aún no se completa porque faltan configurar drivers/DSN ODBC en el contenedor de IRIS y validar credenciales para PostgreSQL. El mapeo de volúmenes Docker `./data:/data` hace que todo lo escrito por IRIS dentro del contenedor aparezca también en la carpeta local `data/`.
+El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (detección, parseo y logging). La conectividad a bases de datos via ODBC ya fue configurada y verificada dentro del contenedor IRIS (DSN `MySQL-Demo` y `PostgreSQL-Demo`, ambos con SELECT 1 OK). JDBC está listo para usarse desde el SQL Gateway del Portal de IRIS (JRE instalado y JARs de MariaDB/PostgreSQL presentes). El mapeo de volúmenes Docker `./data:/data` hace que todo lo escrito por IRIS dentro del contenedor aparezca también en la carpeta local `data/`.
 
 ## Arquitectura actual
 ```
@@ -20,8 +20,8 @@ El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (det
 ## Componentes y estado
 - Demo.FileService: ✅ Monitoreando `/data/IN/` (FileSpec actual: `*.csv`), escribe logs y archiva a `/data/OUT/`.
 - Demo.Process: ✅ Parsea CSV, arma requests y orquesta operaciones; logging de resultados.
-- Demo.MySQL.Operation: ⚠️ Clases compiladas y configuradas con `EnsLib.SQL.OutboundAdapter`, pendiente DSN/driver ODBC y prueba de conexión.
-- Demo.Postgres.Operation: ⚠️ Ídem MySQL. En logs aparece error de DSN/driver: `SQLState IM002 - Data source name not found`.
+- Demo.MySQL.Operation: ✅ Clases compiladas y configuradas con `EnsLib.SQL.OutboundAdapter`; ODBC disponible (DSN configurado). Pendiente validar inserciones reales en tabla `csv_records`.
+- Demo.Postgres.Operation: ✅ Clases compiladas; ODBC disponible (DSN configurado). Pendiente validar inserciones reales, asegurar tabla `demo_data` y revisar SQL de creación/índices.
 - Demo.Util.Logger: ✅ Escribe en `/data/LOG/event_YYYYMMDD.log` (en Docker y reflejado en local por volumen).
 - Demo.Production: ✅ En ejecución; contiene `FileService`, `FileProcessor` y `PostgreSQLOperation`/`MySQLOperation`.
 
@@ -33,36 +33,21 @@ El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (det
   - PostgreSQL-Demo-Credentials: creada recientemente (usuario demo / password demo_pass).
 - Conectividad de red entre contenedores: `iris102-simple ↔ mysql` y `iris102-simple ↔ postgres` OK (ping exitoso).
 
-## Pendientes críticos (bloquean escritura en DB)
-1. Configurar ODBC en el contenedor IRIS (iODBC): instalar drivers y definir DSN del sistema.
-  - DSN requeridos por la Production:
-    - `MySQL-Demo`
-    - `PostgreSQL-Demo`
-  - Mensaje de error actual PostgreSQL: `iODBC Driver Manager: Data source name not found (IM002)`.
-2. Verificar/ajustar que `EnsLib.SQL.OutboundAdapter` use los DSN definidos y las credenciales:
-  - MySQL: `MySQL-Demo-Credentials`
-  - PostgreSQL: `PostgreSQL-Demo-Credentials`
-3. Probar inserciones reales desde las operaciones (`InsertCSVRecord`) y validar en tablas `csv_records`.
-4. Unificar y documentar el patrón de archivos a monitorear (en Production está `*.csv`; la captura del portal mostraba `file*.csv`).
-5. Alinear el target del FileService:
-  - Opción A (real): `FileProcessor` con operaciones reales (recomendada para conexión DB).
-  - Opción B (simulación): (se eliminó el flujo de simulación para limpieza del proyecto)
-6. Revisar y ajustar el mapeo de volúmenes en Docker Compose para que SOLO las carpetas de trabajo residan dentro del contenedor de IRIS (evitar montar `./data:/data` completo si no es necesario; limitar a subdirectorios requeridos o manejar rutas internas puras).
+## Pendientes críticos (para cerrar escritura en DB)
+1. Crear conexiones JDBC en SQL Gateway (Portal IRIS) para MySQL y PostgreSQL y validar "Test Connection".
+2. Validar inserciones reales desde las Operations y confirmar la creación/estructura de tablas:
+   - MySQL: `csv_records`
+   - PostgreSQL: `demo_data` (crear si no existe; índices `file_hash`, `created_at`).
+3. Probar end-to-end con archivos de ejemplo y verificar registros insertados en ambas bases.
+4. Documentar en README ejemplos de consultas de verificación y problemas comunes de SQL Gateway.
+5. Opcional: Automatizar creación de conexiones SQL Gateway y pruebas de humo (SELECT 1) desde ObjectScript.
 
 ## Próximos pasos propuestos
-1. ODBC y DSN en IRIS
-  - Instalar drivers ODBC para MySQL y PostgreSQL en el contenedor IRIS (paquetes y librerías `.so`).
-  - Configurar `/etc/odbcinst.ini` (drivers) y `/etc/odbc.ini` (DSN del sistema).
-  - Validar con `iodbctest` desde el contenedor.
-2. Credenciales y Production
-  - Confirmar que ambos `*-Credentials` existen en IRIS y están asignados a cada Operation.
-  - Reiniciar la Production y revisar el Event Log.
-3. Pruebas end-to-end
-  - Agregar archivos CSV de ejemplo a `data/IN/` (la carpeta `data/samples/` quedó vacía tras la limpieza) y verificar inserciones en MySQL y PostgreSQL.
-4. Documentación
-  - Añadir guía rápida de configuración ODBC/DSN en este repo.
- 5. Volúmenes Docker
-   - Proponer y aplicar ajuste de `docker-compose.yml` para que las carpetas de trabajo queden sólo en el Docker de IRIS; documentar implicancias (logs/OUT visibles vía comandos `docker exec` o exportaciones controladas).
+1. SQL Gateway (JDBC): Crear conexiones y probar desde Portal (usar JARs ubicados en `/opt/irisapp/jdbc/`).
+2. Credenciales y Production: Confirmar asignación de `*-Credentials` y que las Operations usen los DSN configurados.
+3. Pruebas end-to-end: Agregar CSV de ejemplo en `data/IN/` y validar inserciones en ambas DB.
+4. Documentación: Añadir guía rápida de SQL Gateway y consultas de verificación.
+5. Volúmenes Docker: Evaluar si mantener `./data:/data` o segmentar montajes por subcarpetas.
 
 ## Notas
 - La salida `__failed.` en `/data/OUT/` actualmente indica fallo por conexión a DB, no por el parser ni por el servicio.
@@ -291,5 +276,30 @@ El sistema iris102 está **completamente operativo** y puede procesar archivos C
 **Próxima Acción**: Uso en producción o implementación de mejoras opcionales
 
 ---
-**Última actualización**: 14 de octubre de 2025
+**Última actualización**: 16 de octubre de 2025
+
+---
+
+## Cierre de Sprint (16/10/2025)
+
+### Objetivo del sprint
+Dejar operativa la conectividad a bases de datos y preparar el entorno para pruebas end-to-end reales desde IRIS.
+
+### Entregables logrados
+- ODBC operativo en contenedor IRIS (DSN MySQL-Demo y PostgreSQL-Demo verificados con SELECT 1)
+- Ajuste ARM64 en Dockerfile para rutas de librerías ODBC
+- JRE instalado y JARs de MariaDB/PostgreSQL disponibles; drivers cargan en JVM
+- Installer extendido para crear Object Gateways JDBC (JDBC-MySQL y JDBC-PostgreSQL) en %SYS
+- Orden de arranque corregido: Interoperability antes de compilar/ejecutar installer
+
+### Estado
+- Pipeline de archivos estable y producción activa
+- Conectividad a DB lista (ODBC OK, JDBC listo y Object Gateways creados)
+- Falta: crear automáticamente las SQL Gateway Connections (JDBC) con driver class y URL, y validar inserciones reales
+
+### Backlog siguiente sprint
+1. Crear “SQL Gateway Connections” JDBC en Portal via código (MySQL y PostgreSQL) y validar Test Connection
+2. Ejecutar pruebas end-to-end que confirmen inserciones reales en `csv_records` (MySQL) y `demo_data` (PostgreSQL)
+3. Añadir smoke tests invocables desde ObjectScript (SELECT 1 y una inserción mínima)
+4. Documentar consultas de verificación y troubleshooting de SQL Gateway en README
 **Próxima revisión**: Completar Sprint 1

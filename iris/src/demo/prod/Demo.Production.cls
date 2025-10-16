@@ -16,8 +16,8 @@ XData ProductionDefinition
     <Setting Target="Adapter" Name="FilePath">/data/IN</Setting>
     <Setting Target="Adapter" Name="FileSpec">*.csv</Setting>
     <Setting Target="Adapter" Name="Charset">UTF-8</Setting>
-    <Setting Target="Adapter" Name="DeleteFromServer">1</Setting>
-    <Setting Target="Adapter" Name="ArchivePath">/data/WIP</Setting>
+    <Setting Target="Adapter" Name="DeleteFromServer">0</Setting>
+    <Setting Target="Adapter" Name="ArchivePath"></Setting>
     <Setting Target="Adapter" Name="WorkPath">/data/WIP</Setting>
     <Setting Target="Adapter" Name="CallInterval">5</Setting>
   </Item>
@@ -27,6 +27,10 @@ XData ProductionDefinition
         PoolSize="2" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="true" Schedule="">
     <Setting Target="Host" Name="InactivityTimeout">120</Setting>
+    <Setting Target="Host" Name="MySQLTarget">MySQLOperation</Setting>
+    <Setting Target="Host" Name="PostgreSQLTarget">PostgreSQLOperation</Setting>
+    <Setting Target="Host" Name="MaxRetries">3</Setting>
+    <Setting Target="Host" Name="OperationTimeout">180</Setting>
   </Item>
   
     <!-- Test Simple Business Process removed during cleanup -->

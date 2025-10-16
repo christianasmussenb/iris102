@@ -35,15 +35,10 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
         Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "Starting processing of file: " _ pRequest.FileName)
         Do ##class(Demo.Util.Logger).WriteFileLog("PROCESS_START " _ pRequest.FileName _ " hash=" _ pRequest.FileHash)
         
-        // Validate file exists and is readable
-        If '##class(%File).Exists(pRequest.FilePath) {
-            Set pResponse.Status = "error"
-            Set pResponse.ErrorMessage = "File not found: " _ pRequest.FilePath
-            Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Process", pResponse.ErrorMessage)
-            Return $$$OK
-        }
+        // Note: File validation is done by FileService, so we skip file existence check here
+        // The file may have been moved to WIP directory by the time we process it
         
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "File exists, about to parse CSV")
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "About to parse CSV")
         
         // Parse CSV file and validate structure
         Set recordCount = 0
@@ -173,10 +168,8 @@ Method ParseCSVFile(filePath As %String, Output csvData, Output recordCount As %
     Kill csvData
     
     Try {
-        // Ensure file exists
-        If '##class(%File).Exists(filePath) {
-            Return $$$ERROR(5001, "File does not exist: " _ filePath)
-        }
+        // Note: Skip file existence check as file may have been moved by FileService
+        // File validation is already done by FileService before sending to Process
         
         // Initialize csvData explicitly
         Set csvData("recordCount") = 0
@@ -186,6 +179,12 @@ Method ParseCSVFile(filePath As %String, Output csvData, Output recordCount As %
         Set fileContent = ""
         Set stream = ##class(%FileCharacterStream).%New()
         Set stream.Filename = filePath
+        
+        // Check if stream could open the file
+        If stream.Size = 0 {
+            Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Process", "Cannot read file or file is empty: " _ filePath)
+            Return $$$ERROR(5001, "Cannot read file: " _ filePath)
+        }
         
         // Read entire file content
         While 'stream.AtEnd {

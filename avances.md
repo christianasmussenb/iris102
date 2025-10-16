@@ -5,10 +5,12 @@
 ## Estado General del Proyecto
 - Estado: En progreso (end-to-end casi completo)
 - Sprints completados: 4/7
-- Foco actual: Validación de inserciones reales (ODBC verificado) y creación de conexiones JDBC en SQL Gateway
+- Foco actual: Ejecutar pruebas end-to-end con CSV real y validar inserciones reales
 
 ## Resumen ejecutivo
-El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (detección, parseo y logging). La conectividad a bases de datos via ODBC ya fue configurada y verificada dentro del contenedor IRIS (DSN `MySQL-Demo` y `PostgreSQL-Demo`, ambos con SELECT 1 OK). JDBC está listo para usarse desde el SQL Gateway del Portal de IRIS (JRE instalado y JARs de MariaDB/PostgreSQL presentes). El mapeo de volúmenes Docker `./data:/data` hace que todo lo escrito por IRIS dentro del contenedor aparezca también en la carpeta local `data/`.
+El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (detección, parseo y logging). La conectividad a bases de datos via ODBC ya fue configurada y verificada dentro del contenedor IRIS (DSN `MySQL-Demo` y `PostgreSQL-Demo`, ambos con SELECT 1 OK). Las Business Operations usan `EnsLib.SQL.OutboundAdapter` configurado con estos DSN. El mapeo de volúmenes Docker `./data:/data` hace que todo lo escrito por IRIS dentro del contenedor aparezca también en la carpeta local `data/`. 
+
+**Aclaración importante**: Una versión anterior intentó configurar JDBC SQL Gateway pero creó incorrectamente External Language Servers (Config.Gateways). Estos fueron eliminados. El proyecto usa ODBC DSN que ya está funcionando.
 
 ## Arquitectura actual
 ```
@@ -34,20 +36,20 @@ El pipeline de ingesta de CSV está funcional a nivel de servicio y proceso (det
 - Conectividad de red entre contenedores: `iris102-simple ↔ mysql` y `iris102-simple ↔ postgres` OK (ping exitoso).
 
 ## Pendientes críticos (para cerrar escritura en DB)
-1. Crear conexiones JDBC en SQL Gateway (Portal IRIS) para MySQL y PostgreSQL y validar "Test Connection".
-2. Validar inserciones reales desde las Operations y confirmar la creación/estructura de tablas:
+1. Ejecutar prueba end-to-end con archivo CSV de ejemplo:
+   - Copiar CSV de `data/samples/` a `data/IN/`
+   - Verificar procesamiento, inserción en ambas DB, archivado y logs
+2. Validar inserciones reales desde las Operations:
    - MySQL: `csv_records`
-   - PostgreSQL: `demo_data` (crear si no existe; índices `file_hash`, `created_at`).
-3. Probar end-to-end con archivos de ejemplo y verificar registros insertados en ambas bases.
-4. Documentar en README ejemplos de consultas de verificación y problemas comunes de SQL Gateway.
-5. Opcional: Automatizar creación de conexiones SQL Gateway y pruebas de humo (SELECT 1) desde ObjectScript.
+   - PostgreSQL: `csv_records` (verificar estructura de tabla)
+3. Corregir inconsistencia de nombre de tabla en código PostgreSQL (usa `demo_data` pero tabla real es `csv_records`)
+4. Documentar en README consultas de verificación y troubleshooting común
 
 ## Próximos pasos propuestos
-1. SQL Gateway (JDBC): Crear conexiones y probar desde Portal (usar JARs ubicados en `/opt/irisapp/jdbc/`).
-2. Credenciales y Production: Confirmar asignación de `*-Credentials` y que las Operations usen los DSN configurados.
-3. Pruebas end-to-end: Agregar CSV de ejemplo en `data/IN/` y validar inserciones en ambas DB.
-4. Documentación: Añadir guía rápida de SQL Gateway y consultas de verificación.
-5. Volúmenes Docker: Evaluar si mantener `./data:/data` o segmentar montajes por subcarpetas.
+1. End-to-end: Probar con CSV de ejemplo y verificar flujo completo (detección → procesamiento → inserción → archivado).
+2. Validación DB: Consultar tablas `csv_records` en MySQL y PostgreSQL para confirmar inserciones.
+3. Corrección: Renombrar referencias de `demo_data` a `csv_records` en Demo.Postgres.Operation.
+4. Documentación: Añadir guía de verificación con consultas SQL y troubleshooting de ODBC.
 
 ## Notas
 - La salida `__failed.` en `/data/OUT/` actualmente indica fallo por conexión a DB, no por el parser ni por el servicio.
@@ -288,18 +290,46 @@ Dejar operativa la conectividad a bases de datos y preparar el entorno para prue
 ### Entregables logrados
 - ODBC operativo en contenedor IRIS (DSN MySQL-Demo y PostgreSQL-Demo verificados con SELECT 1)
 - Ajuste ARM64 en Dockerfile para rutas de librerías ODBC
-- JRE instalado y JARs de MariaDB/PostgreSQL disponibles; drivers cargan en JVM
-- Installer extendido para crear Object Gateways JDBC (JDBC-MySQL y JDBC-PostgreSQL) en %SYS
-- Orden de arranque corregido: Interoperability antes de compilar/ejecutar installer
+- External Language Servers incorrectos eliminados (aclarado uso de ODBC DSN)
+- Namespace DEMO creado con Interoperability habilitado
+- Todas las clases compiladas exitosamente
+- Production arrancada con todos los componentes activos
+- Credenciales ODBC configuradas correctamente
+- Tablas `csv_records` creadas en MySQL y PostgreSQL
+- Conexiones ODBC verificadas funcionando (TestConnection() = OK)
+
+### Problema Arquitectónico Identificado
+
+**Bloqueador crítico detectado durante pruebas end-to-end:**
+
+El `EnsLib.File.PassthroughService` adapter mueve/elimina el archivo antes de que el Process pueda leerlo. El FileService envía el `FilePath` en el mensaje, pero cuando el Process intenta leer el archivo desde disco, ya no existe.
+
+**Evidencia:**
+- Visual Trace muestra solo 2 mensajes (Request/Response)
+- NO hay mensajes del FileProcessor hacia las Operations
+- Bases de datos vacías (0 registros insertados)
+- Directorio `/data/WIP/` vacío al momento de lectura
+
+**Solución propuesta para próximo sprint:**
+Modificar arquitectura para que FileService lea el contenido del Stream y lo pase en el mensaje como `CSVContent`, eliminando la dependencia de lectura desde disco en el Process.
 
 ### Estado
-- Pipeline de archivos estable y producción activa
-- Conectividad a DB lista (ODBC OK, JDBC listo y Object Gateways creados)
-- Falta: crear automáticamente las SQL Gateway Connections (JDBC) con driver class y URL, y validar inserciones reales
+- Pipeline de archivos: Parcialmente funcional (detección OK, procesamiento FALLA)
+- Conectividad ODBC: ✅ Lista y verificada
+- Production: ✅ Activa con todos componentes Running
+- **BLOQUEADOR:** Arquitectura FileService-Process requiere refactorización
 
-### Backlog siguiente sprint
-1. Crear “SQL Gateway Connections” JDBC en Portal via código (MySQL y PostgreSQL) y validar Test Connection
-2. Ejecutar pruebas end-to-end que confirmen inserciones reales en `csv_records` (MySQL) y `demo_data` (PostgreSQL)
-3. Añadir smoke tests invocables desde ObjectScript (SELECT 1 y una inserción mínima)
-4. Documentar consultas de verificación y troubleshooting de SQL Gateway en README
-**Próxima revisión**: Completar Sprint 1
+### Backlog Próximo Sprint (Priorizado)
+1. **CRÍTICO:** Implementar paso de contenido CSV en mensaje
+   - Modificar `Demo.Msg.FileProcessRequest` (agregar propiedad `CSVContent`)
+   - Actualizar `Demo.FileService.OnProcessInput()` para leer Stream completo
+   - Refactorizar `Demo.Process.ParseCSVFile()` para parsear desde string
+2. Ejecutar prueba end-to-end completa con nueva arquitectura
+3. Validar inserciones reales en ambas bases de datos
+4. Corregir referencia a tabla "demo_data" en PostgreSQL Operation
+5. Documentar flujo final y lecciones aprendidas
+
+**Documentación de referencia:**
+- `REPORTE_SESION_16OCT2025.md` - Análisis completo del problema y 3 opciones de solución
+
+**Próxima revisión**: Sprint de Refactorización Arquitectónica

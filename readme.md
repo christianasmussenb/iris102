@@ -16,14 +16,13 @@ Proyecto con **InterSystems IRIS Interoperability** para orquestar la ingesta au
 - ODBC: Instalados drivers (MariaDB y PostgreSQL) y configurados DSN del sistema (`/etc/odbc*.ini`).
 - ARM64: Ajustados paths de librerías ODBC para arquitectura aarch64 en Dockerfile.
 - Verificación ODBC: Conexiones MySQL-Demo y PostgreSQL-Demo OK (SELECT 1 desde contenedor IRIS).
-- JDBC: Agregados JARs (MariaDB y PostgreSQL) y JRE (OpenJDK 11); classpath configurado. Listo para crear conexiones en SQL Gateway.
- - Installer: Automatiza la creación de Object Gateways JDBC (JDBC-MySQL y JDBC-PostgreSQL) en %SYS para que el Portal los muestre listos.
+- **Nota**: Versión anterior intentó configurar JDBC SQL Gateway pero creó incorrectamente External Language Servers. Este proyecto usa ODBC DSN que ya funciona.
 
 ## Características Principales
 
 - 🔄 **Procesamiento automático** de archivos CSV desde carpeta monitoreada (`/data/IN/`)
 - 🏗️ **Arquitectura Interoperability** completa con Business Service, Process y Operations  
-- 🐘 **Base de datos MySQL/PostgreSQL** preparados, pendientes de conexión desde IRIS (ODBC/DSN)
+- 🐘 **Conectividad ODBC** a MySQL y PostgreSQL verificada y lista para usar
 - 📝 **Logging detallado** con Event Log integrado
 - 🔒 **Tolerancia a fallas** con manejo de errores y validación de datos
 - 🐳 **Containerizado** con Docker funcionando establemente
@@ -157,10 +156,9 @@ ls -la data/OUT/
       - DSN MySQL: `MySQL-Demo`
       - DSN PostgreSQL: `PostgreSQL-Demo`
 - Verificación ODBC (ejecutada): SELECT 1 OK en ambos DSN desde el contenedor IRIS.
-- JDBC listo para SQL Gateway en Portal IRIS:
-      - JAR MySQL (MariaDB): `/opt/irisapp/jdbc/mariadb-java-client.jar` — Driver `com.mysql.cj.jdbc.Driver`
-      - JAR PostgreSQL: `/opt/irisapp/jdbc/postgresql.jar` — Driver `org.postgresql.Driver`
-- Siguiente paso: Crear conexiones JDBC en SQL Gateway y probar "Test Connection" desde el Portal.
+- Business Operations usan `EnsLib.SQL.OutboundAdapter` con estos DSN
+- Credenciales configuradas: MySQL-Demo-Credentials y PostgreSQL-Demo-Credentials
+- Listo para pruebas end-to-end con inserciones reales
 
 ### Configuración del FileService ✅
 - **FilePath**: `/data/IN/`
@@ -220,23 +218,25 @@ Nota: El repositorio fue limpiado de archivos CSV de ejemplo. La carpeta `data/s
 - ✅ Logs detallados sin errores
 - ✅ Producción estable 24/7
 
-## Próximos Pasos (Siguiente Sprint)
+## Próximos Pasos
 
-1. Configurar conexiones JDBC en SQL Gateway (Portal IRIS) para MySQL y PostgreSQL y validar "Test Connection".
+1. Ejecutar prueba end-to-end con archivo CSV real:
+      - Copiar CSV de `data/samples/` a `data/IN/`
+      - Verificar procesamiento completo y archivado
 2. Validar inserciones reales desde las Operations:
-      - Asegurar tablas objetivo (MySQL: `csv_records`; PostgreSQL: `demo_data`).
-      - Ejecutar flujo end-to-end y verificar registros.
-3. Automatizar (opcional): creación de SQL Gateway y credenciales desde código/installer.
-4. Añadir pruebas de humo (SELECT 1) invocables desde ObjectScript y documentarlas.
-5. Actualizar documentación con ejemplos de consultas y troubleshooting de SQL Gateway.
+      - Consultar tablas objetivo (MySQL: `csv_records`; PostgreSQL: `csv_records`)
+      - Confirmar que los registros del CSV se insertaron correctamente
+3. Corregir inconsistencia de nombre de tabla en PostgreSQL (código usa `demo_data` pero tabla real es `csv_records`)
+4. Documentar consultas de verificación y troubleshooting
 
 ---
 
 ## Cierre de Sprint (16/10/2025)
 
 - Objetivo: Habilitar conectividad a DB y preparar pruebas reales.
-- Hechos: ODBC verificado; JDBC listo; Object Gateways JDBC creados; orden de arranque corregido.
-- Pendientes: Crear automáticamente las “SQL Gateway Connections” JDBC en Portal y validar inserciones reales end-to-end.
+- Hechos: ODBC verificado con SELECT 1; DSN configurados; Operations listas para usar ODBC.
+- Aclaración: Se eliminaron External Language Servers creados incorrectamente. El proyecto usa ODBC DSN, no JDBC SQL Gateway.
+- Pendientes: Ejecutar prueba end-to-end con CSV real y validar inserciones en ambas bases de datos.
 
 ---
 

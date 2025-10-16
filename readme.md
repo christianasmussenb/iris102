@@ -2,11 +2,17 @@
 
 Proyecto con **InterSystems IRIS Interoperability** para orquestar la ingesta automática de archivos CSV y persistir en MySQL y PostgreSQL.
 
-## Estado del Proyecto (15/10/2025)
+## Estado del Proyecto (16/10/2025)
 
-- Estado general: En progreso
+- Estado general: En progreso (pipeline de archivos estable)
 - Servicio y proceso de ingesta: OK (detección, parseo, logging, archivado)
+- Producción IRIS: Inicia correctamente con installer corregido
 - Conexión a DB: PENDIENTE (falta configurar ODBC/DSN en IRIS)
+
+### Novedades 16/10/2025
+- Corregido `iris/Installer.cls` (se eliminaron macros no definidas y se usó API estándar `$SYSTEM.Status` y `Ens.Director.IsProductionRunning`).
+- Corregidos storages de mensajes `Demo.Msg.DBOperationRequest/Response` para usar `^Ens.MessageBody*` evitando errores de compilación.
+- Revalidado: Importación, compilación completa y arranque automático de `Demo.Production` OK.
 
 ## Características Principales
 
@@ -70,6 +76,18 @@ docker-compose ps
 docker-compose logs -f iris
 ```
 
+Si necesitas volver a ejecutar el instalador manualmente (por ejemplo, tras cambios en código):
+
+```bash
+# Cargar y ejecutar el instalador dentro del contenedor IRIS
+docker exec -i iris102 iris session IRIS -U USER << 'EOF'
+zn "USER"
+do $system.OBJ.Load("/opt/irisapp/Installer.cls","ck")
+zn "USER"
+do ##class(Demo.Installer).Run()
+EOF
+```
+
 ### 3. Verificar Estado del Sistema
 
 ```bash
@@ -130,10 +148,14 @@ ls -la data/OUT/
 - PostgreSQL-Demo-Credentials: usuario `demo`, password `demo_pass`
 
 ### Conexión a DB desde IRIS (pendiente)
-Se deben configurar drivers ODBC y DSN del sistema en el contenedor IRIS:
-- DSN MySQL: `MySQL-Demo`
-- DSN PostgreSQL: `PostgreSQL-Demo`
-Errores actuales en Event Log: `iODBC IM002 Data source name not found`
+Se deben configurar drivers ODBC y DSN del sistema en el contenedor IRIS para habilitar las operaciones SQL reales:
+- DSN MySQL sugerido: `MySQL-Demo`
+- DSN PostgreSQL sugerido: `PostgreSQL-Demo`
+
+Notas:
+- Ajustar `/etc/odbcinst.ini` y `/etc/odbc.ini` dentro del contenedor IRIS.
+- Probar la conectividad con `EnsLib.SQL.OutboundAdapter` en `Demo.MySQL.Operation`/`Demo.Postgres.Operation`.
+- Error típico si falta DSN: `iODBC IM002 Data source name not found`.
 
 ### Configuración del FileService ✅
 - **FilePath**: `/data/IN/`
@@ -146,7 +168,7 @@ Errores actuales en Event Log: `iODBC IM002 Data source name not found`
 ### Verificar Estado de la Producción
 ```bash
 # Acceder a IRIS terminal
-docker exec -it iris102-simple iris session IRIS -U USER
+docker exec -it iris102 iris session IRIS -U USER
 
 # Verificar estado de la producción
 write ##class(Ens.Director).IsProductionRunning("Demo.Production")
@@ -165,8 +187,8 @@ write ##class(Ens.Director).IsProductionRunning("Demo.Production")
 
 ### Problemas Abiertos
 - Conexión ODBC/DSN desde IRIS a MySQL/PostgreSQL (IM002 DSN no encontrado)
-- Validar inserciones reales en tablas `csv_records`
- - Revisar mapeo de volúmenes: dejar SOLO las carpetas de trabajo dentro del contenedor IRIS; evitar `./data:/data` completo si no es necesario y preferir submontajes o rutas internas.
+- Validar inserciones reales en tablas de destino (ej. `records`)
+- Revisar mapeo de volúmenes si es necesario para aislar rutas de trabajo
 
 ## Estado del Desarrollo
 
@@ -195,11 +217,19 @@ Nota: El repositorio fue limpiado de archivos CSV de ejemplo. La carpeta `data/s
 
 ## Próximos Pasos
 
-1. Configurar ODBC/DSN en IRIS (drivers + `/etc/odbc*.ini`)
-2. Probar `EnsLib.SQL.OutboundAdapter` con DSN configurados
-3. Validar inserciones y actualizar documentación
-4. Ajustar `docker-compose.yml` para que sólo las carpetas de trabajo residan dentro de IRIS; documentar acceso a OUT/LOG vía `docker exec` o exportación controlada
-5. (Opcional) Dashboard, alertas y métricas
+1. Configurar ODBC/DSN en IRIS (drivers + `/etc/odbc*.ini`).
+2. Probar `EnsLib.SQL.OutboundAdapter` con DSN configurados en `Demo.MySQL.Operation`/`Demo.Postgres.Operation`.
+3. Validar inserciones en DB y actualizar documentación (tablas, mapeos, ejemplos de consultas).
+4. Opcional: Dashboard/alertas/métricas.
+
+---
+
+## Changelog
+
+- 2025-10-16
+      - Fix: `Installer.cls` sin macros no definidas; uso de `$SYSTEM.Status` y `Ens.Director.IsProductionRunning`.
+      - Fix: Storage de mensajes en `^Ens.MessageBody*` para evitar errores #5477.
+      - Docs: Instrucciones para re-ejecutar instalador y estado actualizados.
 
 ---
 

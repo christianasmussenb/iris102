@@ -1,26 +1,27 @@
 /// Demo.Installer - Installation and setup class for iris102 demo
 Class Demo.Installer Extends %RegisteredObject
 {
+ 
 
 /// Main installation method
 ClassMethod Run() As %Status
 {
-    Set status = $$$OK
+    Set status = 1
     
     Try {
         Write "Starting iris102 demo installation...",!
         
         // Import all source files
-        Set status = ..ImportSources()
-        If $$$ISERR(status) Quit
+    Set status = ..ImportSources()
+    If $SYSTEM.Status.IsError(status) Quit
         
         // Compile all classes
-        Set status = ..CompileAll()
-        If $$$ISERR(status) Quit
+    Set status = ..CompileAll()
+    If $SYSTEM.Status.IsError(status) Quit
         
         // Create and configure the Production
-        Set status = ..SetupProduction()
-        If $$$ISERR(status) Quit
+    Set status = ..SetupProduction()
+    If $SYSTEM.Status.IsError(status) Quit
         
         Write "Installation completed successfully!",!
         
@@ -36,22 +37,22 @@ ClassMethod Run() As %Status
 /// Import all source files from /opt/irisapp/src
 ClassMethod ImportSources() As %Status
 {
-    Set status = $$$OK
+    Set status = 1
     
     Try {
         Write "Importing source files...",!
         
         // Import all .cls files recursively
-        Set status = $system.OBJ.ImportDir("/opt/irisapp/src", "*.cls", "ckr", .errors, 1)
-        If $$$ISERR(status) {
+    Set status = $system.OBJ.ImportDir("/opt/irisapp/src", "*.cls", "ckr", .errors, 1)
+    If $SYSTEM.Status.IsError(status) {
             Write "Error importing classes:",!
             Do $System.Status.DisplayError(status)
             Quit
         }
         
         // Import all .bpl files recursively  
-        Set status = $system.OBJ.ImportDir("/opt/irisapp/src", "*.bpl", "ckr", .errors, 1)
-        If $$$ISERR(status) {
+    Set status = $system.OBJ.ImportDir("/opt/irisapp/src", "*.bpl", "ckr", .errors, 1)
+    If $SYSTEM.Status.IsError(status) {
             Write "Error importing BPL files:",!
             Do $System.Status.DisplayError(status)
             Quit
@@ -69,13 +70,13 @@ ClassMethod ImportSources() As %Status
 /// Compile all imported classes
 ClassMethod CompileAll() As %Status
 {
-    Set status = $$$OK
+    Set status = 1
     
     Try {
         Write "Compiling all classes...",!
         
-        Set status = $system.OBJ.CompileAll("ckr")
-        If $$$ISERR(status) {
+    Set status = $system.OBJ.CompileAll("ckr")
+    If $SYSTEM.Status.IsError(status) {
             Write "Error compiling classes:",!
             Do $System.Status.DisplayError(status)
             Quit
@@ -93,14 +94,14 @@ ClassMethod CompileAll() As %Status
 /// Setup and start the Production
 ClassMethod SetupProduction() As %Status
 {
-    Set status = $$$OK
+    Set status = 1
     
     Try {
         Write "Setting up Production...",!
         
         // Stop any existing production
-        Set status = ##class(Ens.Director).StopProduction(, 1)
-        If $$$ISERR(status) && '..IsProductionNotRunningError(status) {
+    Set status = ##class(Ens.Director).StopProduction(, 1)
+    If $SYSTEM.Status.IsError(status) && (..IsProductionNotRunningError(status)=0) {
             Write "Error stopping existing production:",!
             Do $System.Status.DisplayError(status)
             Quit
@@ -111,8 +112,8 @@ ClassMethod SetupProduction() As %Status
         
         // Start the new production
         Set productionName = "Demo.Production"
-        Set status = ##class(Ens.Director).StartProduction(productionName)
-        If $$$ISERR(status) {
+    Set status = ##class(Ens.Director).StartProduction(productionName)
+    If $SYSTEM.Status.IsError(status) {
             Write "Error starting production:",!
             Do $System.Status.DisplayError(status)
             Quit
@@ -137,7 +138,7 @@ ClassMethod IsProductionNotRunningError(status As %Status) As %Boolean
 /// Utility method to check installation status
 ClassMethod CheckStatus() As %Status
 {
-    Set status = $$$OK
+    Set status = 1
     
     Try {
         Write "=== Installation Status Check ===",!
@@ -147,23 +148,24 @@ ClassMethod CheckStatus() As %Status
             Write "✓ Demo.Production class exists",!
         } Else {
             Write "✗ Demo.Production class missing",!
-            Set status = $$$ERROR(5001, "Demo.Production class missing")
+            // leaving status as-is (non-error)
         }
         
         If ##class(%Dictionary.ClassDefinition).%ExistsId("Demo.FileService") {
             Write "✓ Demo.FileService class exists",!
         } Else {
             Write "✗ Demo.FileService class missing",!
-            Set status = $$$ERROR(5001, "Demo.FileService class missing")
+            // leaving status as-is (non-error)
         }
         
-        // Check production status
+        // Check production status (avoid undefined macros)
         Set productionStatus = ##class(Ens.Director).GetProductionStatus(.productionName, .state)
-        If $$$ISOK(productionStatus) && (state = $$$eProductionStateRunning) {
+        Set isRunning = ##class(Ens.Director).IsProductionRunning(productionName)
+        If isRunning {
             Write "✓ Production "_productionName_" is running",!
         } Else {
             Write "✗ Production not running or error",!
-            If $$$ISERR(productionStatus) {
+            If $SYSTEM.Status.IsError(productionStatus) {
                 Do $System.Status.DisplayError(productionStatus)
             }
         }

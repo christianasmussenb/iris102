@@ -32,11 +32,11 @@ Storage Default
 <Value>FileHash</Value>
 </Value>
 </Data>
-<DataLocation>^Demo.Msg.DBOperationRequestD</DataLocation>
+<DataLocation>^Ens.MessageBodyD</DataLocation>
 <DefaultData>DBOperationRequestDefaultData</DefaultData>
-<IdLocation>^Demo.Msg.DBOperationRequestD</IdLocation>
-<IndexLocation>^Demo.Msg.DBOperationRequestI</IndexLocation>
-<StreamLocation>^Demo.Msg.DBOperationRequestS</StreamLocation>
+<IdLocation>^Ens.MessageBodyD</IdLocation>
+<IndexLocation>^Ens.MessageBodyI</IndexLocation>
+<StreamLocation>^Ens.MessageBodyS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

@@ -45,11 +45,11 @@ Storage Default
 <Value>ErrorMessage</Value>
 </Value>
 </Data>
-<DataLocation>^Demo.Msg.DBOperationResponseD</DataLocation>
+<DataLocation>^Ens.MessageBodyD</DataLocation>
 <DefaultData>DBOperationResponseDefaultData</DefaultData>
-<IdLocation>^Demo.Msg.DBOperationResponseD</IdLocation>
-<IndexLocation>^Demo.Msg.DBOperationResponseI</IndexLocation>
-<StreamLocation>^Demo.Msg.DBOperationResponseS</StreamLocation>
+<IdLocation>^Ens.MessageBodyD</IdLocation>
+<IndexLocation>^Ens.MessageBodyI</IndexLocation>
+<StreamLocation>^Ens.MessageBodyS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

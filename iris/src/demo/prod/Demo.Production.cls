@@ -40,7 +40,6 @@ XData ProductionDefinition
         PoolSize="1" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="true" Schedule="">
         <Setting Target="Adapter" Name="DSN">MySQL-Demo</Setting>
-        <Setting Target="Adapter" Name="Credentials">MySQL-Demo-Credentials</Setting>
     <Setting Target="Host" Name="RetryCount">3</Setting>
     <Setting Target="Host" Name="RetryInterval">2</Setting>
   </Item>
@@ -50,7 +49,6 @@ XData ProductionDefinition
         PoolSize="1" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="true" Schedule="">
         <Setting Target="Adapter" Name="DSN">PostgreSQL-Demo</Setting>
-        <Setting Target="Adapter" Name="Credentials">PostgreSQL-Demo-Credentials</Setting>
     <Setting Target="Host" Name="RetryCount">3</Setting>
     <Setting Target="Host" Name="RetryInterval">2</Setting>
   </Item>
@@ -68,8 +66,8 @@ ClassMethod OnStart(pTimeStarted As %String) As %Status
         Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Production", "Production starting up...")
         Do ##class(Demo.Util.Logger).WriteFileLog("STARTUP Production Demo.Production starting")
         
-        // Initialize database credentials from environment
-        Do ..InitializeCredentials()
+        // DISABLED: Credentials are embedded in DSN, no need to create them separately
+        // Do ..InitializeCredentials()
         
         // Initialize file paths from environment
         Do ..InitializeFilePaths()

@@ -11,7 +11,7 @@ ClassMethod TestConnection() As %Status
     Try {
         Set adapter = ##class(EnsLib.SQL.OutboundAdapter).%New()
         Set adapter.DSN = "MySQL-Demo"
-        Set adapter.Credentials = "MySQL-Demo-Credentials"
+        // Credentials are embedded in DSN, no need to set separately
         Do adapter.Connect()
         Do ##class(Demo.Util.Logger).WriteEvent("INFO","Demo.MySQL.Operation","ODBC connect OK to DSN MySQL-Demo")
         Do adapter.Disconnect()
@@ -28,8 +28,6 @@ Property MySQLHost As %String [ InitialExpression = "localhost" ];
 Property MySQLPort As %String [ InitialExpression = "3306" ];
 
 Property MySQLDatabase As %String [ InitialExpression = "demo" ];
-
-Property MySQLCredentials As %String [ InitialExpression = "MySQL-Demo-Credentials" ];
 
 /// Handle database operation requests
 Method OnMessage(pRequest As Demo.Msg.DatabaseInsertRequest, Output pResponse As Demo.Msg.DatabaseInsertResponse) As %Status

@@ -6,7 +6,7 @@ Class Demo.Msg.FileProcessRequest Extends Ens.Request
 Property FilePath As %String(MAXLEN = 500);
 
 /// CSV file content (full text content read from stream)
-Property CSVContent As %String(MAXLEN = "") [ Required ];
+Property CSVContent As %String(MAXLEN = "");
 
 /// Original filename without path
 Property FileName As %String(MAXLEN = 255) [ Required ];

@@ -56,10 +56,16 @@ Method OnProcessInput(pInput As %FileCharacterStream, pOutput As %RegisteredObje
         // *** NEW ARCHITECTURE: Read CSV content from Stream ***
         Set csvContent = ""
         Do pInput.Rewind()  // Ensure we're at the beginning
+        
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.FileService", "Stream info: Size=" _ pInput.Size _ ", AtEnd=" _ pInput.AtEnd)
+        
         While 'pInput.AtEnd {
-            Set csvContent = csvContent _ pInput.Read(32000)
+            Set chunk = pInput.Read(32000)
+            Set csvContent = csvContent _ chunk
         }
         Set fileSize = $Length(csvContent)
+        
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.FileService", "Content read: " _ fileSize _ " bytes, first 100 chars: " _ $EXTRACT(csvContent, 1, 100))
         
         // Debug tracking
         Do ##class(Demo.Util.Logger).DebugFileProcessing(fileName, "START", "size=" _ fileSize _ " bytes (read from stream)")

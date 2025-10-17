@@ -11,7 +11,7 @@ ClassMethod TestConnection() As %Status
     Try {
         Set adapter = ##class(EnsLib.SQL.OutboundAdapter).%New()
         Set adapter.DSN = "PostgreSQL-Demo"
-        Set adapter.Credentials = "PostgreSQL-Demo-Credentials"
+        // Credentials are embedded in DSN, no need to set separately
         Do adapter.Connect()
         Do ##class(Demo.Util.Logger).WriteEvent("INFO","Demo.Postgres.Operation","ODBC connect OK to DSN PostgreSQL-Demo")
         Do adapter.Disconnect()

@@ -2,21 +2,32 @@
 
 Proyecto con **InterSystems IRIS Interoperability** para orquestar la ingesta automática de archivos CSV y persistir en MySQL y PostgreSQL.
 
-## Estado del Proyecto (16/10/2025)
+## Estado del Proyecto (17/10/2025)
 
-- Estado general: En progreso (pipeline de archivos estable)
-- Servicio y proceso de ingesta: OK (detección, parseo, logging, archivado)
-- Producción IRIS: Inicia correctamente con installer corregido
-- Conexión a DB: ODBC OK (DSN MySQL-Demo y PostgreSQL-Demo verificados); JDBC listo (JRE y JARs instalados, falta crear conexiones en SQL Gateway)
+**Sprint 4 Completado - Migración a JDBC Planificada**
 
-### Novedades 16/10/2025
-- Fix Installer: `iris/Installer.cls` sin macros no definidas; uso de `$SYSTEM.Status` y `Ens.Director.IsProductionRunning`.
-- Fix Mensajes: Storages de `Demo.Msg.DBOperationRequest/Response` en `^Ens.MessageBody*` (compilación limpia).
-- Infra DB: Habilitado servicio PostgreSQL en docker-compose y dependencias entre contenedores.
-- ODBC: Instalados drivers (MariaDB y PostgreSQL) y configurados DSN del sistema (`/etc/odbc*.ini`).
-- ARM64: Ajustados paths de librerías ODBC para arquitectura aarch64 en Dockerfile.
-- Verificación ODBC: Conexiones MySQL-Demo y PostgreSQL-Demo OK (SELECT 1 desde contenedor IRIS).
-- **Nota**: Versión anterior intentó configurar JDBC SQL Gateway pero creó incorrectamente External Language Servers. Este proyecto usa ODBC DSN que ya funciona.
+- ✅ Arquitectura FileService-Process implementada (contenido en mensaje)
+- ✅ FileService lee Stream completo y lo pasa en CSVContent
+- ✅ Process parsea CSV desde string en memoria (no filesystem)
+- ❌ **BLOCKER**: Conexiones ODBC no funcionan (ERROR #6022 irresolvible)
+- 📋 **DECISIÓN**: Migrar a JDBC en Sprint 5 (ver `PLAN_MIGRACION_JDBC.md`)
+- 📚 Documentación exhaustiva creada (ver documentos de reporte)
+
+### Novedades 17/10/2025 - Sprint 4
+- ✅ **Arquitectura Stream-to-String**: FileService ahora pasa contenido CSV completo en mensaje
+- ✅ **Demo.Msg.FileProcessRequest**: Nueva propiedad `CSVContent` (MAXLEN="")
+- ✅ **Demo.FileService**: Lee Stream completo con `pInput.Read(32000)` en loop
+- ✅ **Demo.Process.ParseCSVFile()**: Parsea desde string usando `$Piece(csvContent, $C(10), i)`
+- ✅ **Documentación**: Creados 3 documentos exhaustivos (4000+ líneas total)
+- ❌ **ODBC Blocker**: 15+ intentos de configuración, ERROR #6022 irresolvible
+- 📋 **Plan JDBC**: Documento completo para migración en Sprint 5
+- 🔍 **Troubleshooting**: 5 horas documentadas en `PROBLEMA_ODBC_DOCUMENTADO.md`
+
+### Documentos Clave Creados
+- `BUENAS_PRACTICAS_IRIS.md`: Guía completa de desarrollo IRIS (4000+ líneas)
+- `PROBLEMA_ODBC_DOCUMENTADO.md`: Análisis exhaustivo del problema ODBC
+- `PLAN_MIGRACION_JDBC.md`: Roadmap detallado para Sprint 5
+- `REPORTE_FINAL_SPRINT4_ODBC.md`: Reporte completo del sprint
 
 ## Características Principales
 

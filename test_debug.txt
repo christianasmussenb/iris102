@@ -1,0 +1,23 @@
+// Test manual del flujo
+Set request = ##class(Demo.Msg.FileProcessRequest).%New()
+Set request.CSVContent = "id,name,age,city"_$C(10)_"1,Juan,30,Madrid"
+Set request.FileName = "test.csv"
+Set request.FileSize = 50
+Set request.FileHash = "test123"
+Set request.DetectedAt = $ZDATETIME($HOROLOG, 3)
+Set request.RetryCount = 0
+
+Write "Request created", !
+Write "CSVContent length: ", $LENGTH(request.CSVContent), !
+Write "Content: ", request.CSVContent, !
+
+// Intentar procesar
+Set process = ##class(Demo.Process).%New()
+Set status = process.OnRequest(request, .response)
+
+Write "Status: ", $System.Status.GetErrorText(status), !
+If $IsObject(response) {
+    Write "Response Status: ", response.Status, !
+    Write "Error Message: ", response.ErrorMessage, !
+    Write "Total Records: ", response.TotalRecords, !
+}

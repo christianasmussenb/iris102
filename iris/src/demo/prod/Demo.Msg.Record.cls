@@ -2,8 +2,11 @@
 Class Demo.Msg.FileProcessRequest Extends Ens.Request
 {
 
-/// Full path to the CSV file to process
-Property FilePath As %String(MAXLEN = 500) [ Required ];
+/// Full path to the CSV file to process (DEPRECATED - use CSVContent instead)
+Property FilePath As %String(MAXLEN = 500);
+
+/// CSV file content (full text content read from stream)
+Property CSVContent As %String(MAXLEN = "") [ Required ];
 
 /// Original filename without path
 Property FileName As %String(MAXLEN = 255) [ Required ];
@@ -42,6 +45,9 @@ Storage Default
 </Value>
 <Value name="6">
 <Value>RetryCount</Value>
+</Value>
+<Value name="7">
+<Value>CSVContent</Value>
 </Value>
 </Data>
 <DataLocation>^Ens.MessageBodyD</DataLocation>

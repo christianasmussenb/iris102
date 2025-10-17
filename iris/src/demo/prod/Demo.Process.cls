@@ -44,9 +44,10 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
         Set recordCount = 0
         Kill csvData
         
-        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "About to call ParseCSVFile for: " _ pRequest.FilePath)
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "About to call ParseCSVFile for: " _ pRequest.FileName)
         
-        Set parseStatus = ..ParseCSVFile(pRequest.FilePath, .csvData, .recordCount)
+        // *** NEW ARCHITECTURE: Parse from content, not file path ***
+        Set parseStatus = ..ParseCSVFile(pRequest.CSVContent, pRequest.FileName, pRequest.FileHash, .csvData, .recordCount)
         
         Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "ParseCSVFile returned status: " _ $System.Status.GetErrorText(parseStatus) _ ", recordCount: " _ recordCount)
         
@@ -161,42 +162,36 @@ Method OnRequest(pRequest As Demo.Msg.FileProcessRequest, Output pResponse As De
 }
 
 /// Parse CSV file into structured data
-Method ParseCSVFile(filePath As %String, Output csvData, Output recordCount As %Integer) As %Status
+/// Parse CSV content from string (NEW ARCHITECTURE - no file I/O)
+Method ParseCSVFile(csvContent As %String, fileName As %String, fileHash As %String, Output csvData, Output recordCount As %Integer) As %Status
 {
     Set status = $$$OK
     Set recordCount = 0
     Kill csvData
     
     Try {
-        // Note: Skip file existence check as file may have been moved by FileService
-        // File validation is already done by FileService before sending to Process
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "Parsing CSV content for: " _ fileName)
         
         // Initialize csvData explicitly
         Set csvData("recordCount") = 0
         Set csvData("hasHeader") = 0
+        Set csvData("fileName") = fileName
+        Set csvData("fileHash") = fileHash
         
-        // Simplified file reading - just read all content first
-        Set fileContent = ""
-        Set stream = ##class(%FileCharacterStream).%New()
-        Set stream.Filename = filePath
-        
-        // Check if stream could open the file
-        If stream.Size = 0 {
-            Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Process", "Cannot read file or file is empty: " _ filePath)
-            Return $$$ERROR(5001, "Cannot read file: " _ filePath)
-        }
-        
-        // Read entire file content
-        While 'stream.AtEnd {
-            Set fileContent = fileContent _ stream.Read(1000)
+        // Validate content is not empty
+        If csvContent = "" {
+            Do ##class(Demo.Util.Logger).WriteEvent("ERROR", "Demo.Process", "CSV content is empty for: " _ fileName)
+            Return $$$ERROR(5001, "CSV content is empty")
         }
         
         // Split into lines
-        Set lineCount = $Length(fileContent, $C(10))  // Split by newline
+        Set lineCount = $Length(csvContent, $C(10))  // Split by newline
         Set hasHeader = 0
         
+        Do ##class(Demo.Util.Logger).WriteEvent("INFO", "Demo.Process", "Processing " _ lineCount _ " lines from CSV content")
+        
         For i = 1:1:lineCount {
-            Set line = $Piece(fileContent, $C(10), i)
+            Set line = $Piece(csvContent, $C(10), i)
             
             // Remove carriage return if present
             Set line = $ZStrip(line, ">", $C(13))

@@ -1,5 +1,5 @@
 # InterSystems IRIS Dockerfile for iris102 demo
-FROM intersystemsdc/iris-community:latest
+FROM intersystemsdc/irishealth-community:2024.3
 
 # Switch to root for setup
 USER root

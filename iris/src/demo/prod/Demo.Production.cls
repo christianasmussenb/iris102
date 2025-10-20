@@ -35,20 +35,22 @@ XData ProductionDefinition
   
     <!-- Test Simple Business Process removed during cleanup -->
   
-  <!-- MySQL Operation -->
-  <Item Name="MySQLOperation" Category="" ClassName="Demo.MySQL.Operation" 
+  <!-- MySQL Operation - JDBC -->
+  <Item Name="MySQLOperation" Category="" ClassName="Demo.MySQL.JDBCOperation" 
         PoolSize="1" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="true" Schedule="">
-        <Setting Target="Adapter" Name="DSN">MySQL-Demo</Setting>
+        <Setting Target="Adapter" Name="DSN">MySQL-Demo-JDBC</Setting>
+        <Setting Target="Adapter" Name="JGService">%Java Server</Setting>
     <Setting Target="Host" Name="RetryCount">3</Setting>
     <Setting Target="Host" Name="RetryInterval">2</Setting>
   </Item>
   
-  <!-- PostgreSQL Operation -->
-  <Item Name="PostgreSQLOperation" Category="" ClassName="Demo.Postgres.Operation" 
+  <!-- PostgreSQL Operation - JDBC -->
+  <Item Name="PostgreSQLOperation" Category="" ClassName="Demo.Postgres.JDBCOperation" 
         PoolSize="1" Enabled="true" Foreground="false" Comment="" 
         LogTraceEvents="true" Schedule="">
-        <Setting Target="Adapter" Name="DSN">PostgreSQL-Demo</Setting>
+        <Setting Target="Adapter" Name="DSN">PostgreSQL-Demo-JDBC</Setting>
+        <Setting Target="Adapter" Name="JGService">%Java Server</Setting>
     <Setting Target="Host" Name="RetryCount">3</Setting>
     <Setting Target="Host" Name="RetryInterval">2</Setting>
   </Item>

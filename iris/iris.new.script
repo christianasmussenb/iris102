@@ -1,0 +1,152 @@
+#!/bin/bash
+# =============================================================================
+# IRIS Initialization Script - Sprint 5 (JDBC)
+# iris102 demo - Reconstrucción limpia
+# Fecha: 20 Octubre 2025
+# =============================================================================
+
+set -e
+
+echo "============================================================================="
+echo "  IRIS 102 Demo - Initialization Script"
+echo "  Sprint 5: JDBC Implementation"
+echo "============================================================================="
+echo ""
+
+# Wait for IRIS to be ready
+echo "⏳ Waiting for IRIS to start..."
+RETRIES=30
+COUNT=0
+
+until iris session iris -U %SYS < /dev/null 2>/dev/null; do
+    COUNT=$((COUNT+1))
+    if [ $COUNT -ge $RETRIES ]; then
+        echo "❌ ERROR: IRIS failed to start after $RETRIES attempts"
+        exit 1
+    fi
+    echo "   Attempt $COUNT/$RETRIES - IRIS not ready yet, waiting..."
+    sleep 5
+done
+
+echo "✓ IRIS is ready!"
+echo ""
+
+# Run IRIS setup commands
+echo "🔧 Running IRIS setup commands..."
+iris session iris -U %SYS << 'EOF'
+
+// =============================================================================
+// Create DEMO namespace
+// =============================================================================
+Write !,"Step 1: Creating DEMO namespace...",!
+
+Set ns = "DEMO"
+If '##class(Config.Namespaces).Exists(ns) {
+    Write "  - Namespace does not exist, creating...",!
+    
+    Set properties("Globals") = "USER"
+    Set properties("Routines") = "USER"
+    Set properties("Package") = "USER"
+    
+    Set status = ##class(Config.Namespaces).Create(ns, .properties)
+    If $$$ISERR(status) {
+        Write "  ❌ ERROR creating namespace:",!
+        Do $System.Status.DisplayError(status)
+        Halt
+    }
+    Write "  ✓ Namespace '"_ns_"' created successfully",!
+} Else {
+    Write "  ℹ Namespace '"_ns_"' already exists",!
+}
+
+// =============================================================================
+// Switch to DEMO namespace
+// =============================================================================
+Write !,"Step 2: Switching to DEMO namespace...",!
+ZN "DEMO"
+Write "  ✓ Now in namespace: ",$NAMESPACE,!
+
+// =============================================================================
+// Enable Interoperability
+// =============================================================================
+Write !,"Step 3: Enabling Interoperability...",!
+
+Set status = ##class(Ens.Director).EnableNamespace($NAMESPACE, 1)
+If $$$ISERR(status) {
+    Write "  ❌ ERROR enabling Interoperability:",!
+    Do $System.Status.DisplayError(status)
+    Halt
+}
+Write "  ✓ Interoperability enabled successfully",!
+
+// =============================================================================
+// Import Installer class
+// =============================================================================
+Write !,"Step 4: Importing Installer class...",!
+
+Set installerPath = "/opt/irisapp/Installer.new.cls"
+If ##class(%File).Exists(installerPath) {
+    Set status = $system.OBJ.Load(installerPath, "ck")
+    If $$$ISERR(status) {
+        Write "  ❌ ERROR loading Installer.cls:",!
+        Do $System.Status.DisplayError(status)
+        Halt
+    }
+    Write "  ✓ Installer.cls loaded successfully",!
+} Else {
+    Write "  ⚠ WARNING: Installer.cls not found at "_installerPath,!
+    Write "  Trying default location...",!
+    Set installerPath = "/opt/irisapp/Installer.cls"
+    If ##class(%File).Exists(installerPath) {
+        Set status = $system.OBJ.Load(installerPath, "ck")
+        If $$$ISERR(status) {
+            Write "  ❌ ERROR loading Installer.cls:",!
+            Do $System.Status.DisplayError(status)
+            Halt
+        }
+        Write "  ✓ Installer.cls loaded from default location",!
+    } Else {
+        Write "  ❌ ERROR: Installer.cls not found in any location",!
+        Halt
+    }
+}
+
+// =============================================================================
+// Run the installer
+// =============================================================================
+Write !,"Step 5: Running installer...",!
+Write !
+
+Set status = ##class(Demo.Installer).Run()
+If $$$ISERR(status) {
+    Write !,"❌ ERROR: Installation failed:",!
+    Do $System.Status.DisplayError(status)
+    Halt
+}
+
+Write !,"============================================================================="
+Write !,"  ✓ IRIS Initialization completed successfully!"
+Write !,"============================================================================="
+Write !
+
+EOF
+
+IRIS_EXIT_CODE=$?
+
+echo ""
+if [ $IRIS_EXIT_CODE -eq 0 ]; then
+    echo "✓ IRIS initialization script completed successfully"
+    echo ""
+    echo "============================================================================="
+    echo "  IRIS Management Portal:"
+    echo "  http://localhost:52773/csp/sys/UtilHome.csp"
+    echo ""
+    echo "  Credentials:"
+    echo "  Username: SuperUser"
+    echo "  Password: SYS"
+    echo "============================================================================="
+    echo ""
+else
+    echo "❌ IRIS initialization script failed with exit code: $IRIS_EXIT_CODE"
+    exit $IRIS_EXIT_CODE
+fi

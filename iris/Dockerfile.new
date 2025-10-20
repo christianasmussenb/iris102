@@ -1,0 +1,116 @@
+# =============================================================================
+# InterSystems IRIS 2024.3 - Clean Build for JDBC Integration
+# Sprint 5 - Reconstrucción completa desde cero
+# Fecha: 20 Octubre 2025
+# =============================================================================
+
+FROM intersystemsdc/irishealth-community:2024.3-zpm
+
+# -----------------------------------------------------------------------------
+# FASE 1: Configuración base del sistema
+# -----------------------------------------------------------------------------
+USER root
+WORKDIR /opt/irisapp
+
+# Actualizar sistema y limpiar
+RUN apt-get update && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------------------------------------------------------
+# FASE 2: Instalación de Java (requerido para JDBC)
+# -----------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-11-jdk \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configurar JAVA_HOME
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Verificar instalación de Java
+RUN java -version && javac -version
+
+# -----------------------------------------------------------------------------
+# FASE 3: Descarga de JDBC Drivers oficiales
+# -----------------------------------------------------------------------------
+
+# Crear directorio para JDBC drivers
+RUN mkdir -p /opt/irisapp/jdbc && chmod 755 /opt/irisapp/jdbc
+
+# Descargar MySQL Connector/J 8.0.33 (Driver JDBC oficial de MySQL)
+RUN cd /opt/irisapp/jdbc && \
+    wget -q https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar \
+    -O mysql-connector-j-8.0.33.jar && \
+    chmod 644 mysql-connector-j-8.0.33.jar
+
+# Descargar PostgreSQL JDBC Driver 42.6.0 (Driver oficial de PostgreSQL)
+RUN cd /opt/irisapp/jdbc && \
+    wget -q https://jdbc.postgresql.org/download/postgresql-42.6.0.jar \
+    -O postgresql-42.6.0.jar && \
+    chmod 644 postgresql-42.6.0.jar
+
+# Verificar que los JARs se descargaron correctamente
+RUN ls -lh /opt/irisapp/jdbc/
+
+# -----------------------------------------------------------------------------
+# FASE 4: Configuración del classpath para JDBC
+# -----------------------------------------------------------------------------
+ENV JDBC_CLASSPATH=/opt/irisapp/jdbc/mysql-connector-j-8.0.33.jar:/opt/irisapp/jdbc/postgresql-42.6.0.jar
+ENV CLASSPATH=$JDBC_CLASSPATH:$CLASSPATH
+
+# -----------------------------------------------------------------------------
+# FASE 5: Preparación de directorios de trabajo
+# -----------------------------------------------------------------------------
+RUN mkdir -p /opt/irisapp/src \
+    && mkdir -p /data/IN \
+    && mkdir -p /data/OUT \
+    && mkdir -p /data/LOG \
+    && mkdir -p /data/WIP \
+    && chmod -R 755 /data
+
+# -----------------------------------------------------------------------------
+# FASE 6: Copia de archivos del proyecto
+# -----------------------------------------------------------------------------
+
+# Copiar clases de ObjectScript
+COPY src/ /opt/irisapp/src/
+
+# Copiar script instalador (versión JDBC)
+COPY Installer.new.cls /opt/irisapp/Installer.new.cls
+
+# Copiar script de inicialización de IRIS (versión JDBC)
+COPY iris.new.script /tmp/iris.script
+RUN chmod +x /tmp/iris.script
+
+# -----------------------------------------------------------------------------
+# FASE 7: Permisos y ownership
+# -----------------------------------------------------------------------------
+RUN chown -R irisowner:irisowner /opt/irisapp \
+    && chown -R irisowner:irisowner /data
+
+# -----------------------------------------------------------------------------
+# FASE 8: Configuración final y switch a usuario IRIS
+# -----------------------------------------------------------------------------
+USER irisowner
+
+# Variables de entorno para IRIS
+ENV IRIS_PROJECT_PATH=/opt/irisapp/src
+ENV IRIS_NAMESPACE=DEMO
+
+# -----------------------------------------------------------------------------
+# Información de la imagen
+# -----------------------------------------------------------------------------
+LABEL maintainer="iris102-project"
+LABEL version="5.0-jdbc"
+LABEL description="IRIS 2024.3 with JDBC support for MySQL and PostgreSQL"
+LABEL java.version="11"
+LABEL mysql.jdbc.version="8.0.33"
+LABEL postgresql.jdbc.version="42.6.0"
+
+# Puerto por defecto de IRIS
+EXPOSE 1972 52773
+
+# Punto de entrada: script de inicialización
+CMD ["/iris-main"]

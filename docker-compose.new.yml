@@ -1,0 +1,138 @@
+# =============================================================================
+# Docker Compose - IRIS 2024.3 + MySQL + PostgreSQL
+# Sprint 5 - Configuración limpia con JDBC
+# Fecha: 20 Octubre 2025
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # IRIS 2024.3 - InterSystems IRIS Community Edition
+  # ---------------------------------------------------------------------------
+  iris:
+    container_name: iris102
+    build:
+      context: ./iris
+      dockerfile: Dockerfile.new
+    ports:
+      - "1972:1972"   # SuperServer port
+      - "52773:52773" # Management Portal
+    volumes:
+      - ./data:/data
+      - ./iris/src:/opt/irisapp/src
+    environment:
+      - IRIS_USERNAME=SuperUser
+      - IRIS_PASSWORD=SYS
+      - IRIS_NAMESPACE=DEMO
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+      - JDBC_CLASSPATH=/opt/irisapp/jdbc/mysql-connector-j-8.0.33.jar:/opt/irisapp/jdbc/postgresql-42.6.0.jar
+    networks:
+      - iris102_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/irissys/dev/Cloud/ICM/waitISC.sh", "DEMO"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.0
+  # ---------------------------------------------------------------------------
+  mysql:
+    container_name: iris102-mysql
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: demo
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/mysql_init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - iris102_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 15
+  # ---------------------------------------------------------------------------
+  postgres:
+    container_name: iris102-postgres
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: demo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/postgres_init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - iris102_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  iris102_network:
+    driver: bridge
+    name: iris102_network
+
+# =============================================================================
+# Volumes (persistencia de datos)
+# =============================================================================
+volumes:
+  mysql_data:
+    name: iris102_mysql_data
+  postgres_data:
+    name: iris102_postgres_data
+
+# =============================================================================
+# Notas de uso:
+#
+# Construcción inicial:
+#   docker-compose build --no-cache
+#
+# Iniciar servicios:
+#   docker-compose up -d
+#
+# Ver logs:
+#   docker-compose logs -f iris
+#   docker-compose logs -f mysql
+#   docker-compose logs -f postgres
+#
+# Detener servicios:
+#   docker-compose down
+#
+# Limpiar todo (incluyendo volúmenes):
+#   docker-compose down -v
+#
+# Acceso a Management Portal:
+#   http://localhost:52773/csp/sys/UtilHome.csp
+#   Usuario: SuperUser
+#   Password: SYS
+# =============================================================================

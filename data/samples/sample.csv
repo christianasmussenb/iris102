@@ -1,0 +1,3 @@
+order_id,customer_id,amount,currency,order_date
+A1001,C001,123.45,CLP,2025-10-19
+A1002,C002,89.99,USD,2025-10-19

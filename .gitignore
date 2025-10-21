@@ -6,6 +6,7 @@ data/WIP/*
 !data/OUT/.gitkeep
 !data/LOG/.gitkeep
 !data/WIP/.gitkeep
-
+.DS_Store
+*.log
 *.csv
 !data/samples/*.csv
